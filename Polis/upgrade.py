@@ -12,15 +12,6 @@ SourceFolder = '/home/me/'
 VersionToUpload = 'polis-1.3.1.zip'
 
 
-def test(connection):
-    try:
-        result = connection.run('ps -A | grep bash', hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-    except UnexpectedExit:
-        logging.info('does not exist !')
-
-
 def is_directory_exists(connection, dir):
     isExists = False
     try:
