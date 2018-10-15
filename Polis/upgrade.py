@@ -84,7 +84,7 @@ def start_daemon(connection, dir):
 
 def main():
     # create logger
-    logger = logging.getLogger('')
+    logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler('debug.log')
     fh.setLevel(logging.DEBUG)
