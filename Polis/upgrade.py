@@ -1,17 +1,14 @@
 import logging
 import time
 import sys
+import json
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit
 
-ConnectionsList = [ ['bob@192.168.1.1',    '/home/bob/Polis'],
-                    ['john@192.68.1.2',    '/home/john/Polis'],
-                   ]
 
-SourceFolder = '/home/me/'
-VersionToUpload = 'polis-1.3.1.zip'
+'''
 
-
+'''
 def is_directory_exists(connection, dir):
     isExists = False
     try:
@@ -23,7 +20,9 @@ def is_directory_exists(connection, dir):
         logging.info('{} does not exist !'.format(dir))
     return isExists
 
+'''
 
+'''
 def create_polis_directory(connection, dir):
     exists = is_directory_exists(connection, dir)
     if not exists :
@@ -32,7 +31,9 @@ def create_polis_directory(connection, dir):
         logging.info(msg.format(result))
     return exists
 
+'''
 
+'''
 def stop_daemon(connection, dir):
     # Clean up th mess
     try:
@@ -49,19 +50,21 @@ def stop_daemon(connection, dir):
     except UnexpectedExit:
         logging.info('{} does not run !'.format('polisd'))
 
+'''
 
-def transfert_new_version(connection, dir):
+'''
+def transfert_new_version(connection, dir, sourceFolder, versionToUpload):
     try:
         # Transfer the inflated to file to the target
-        result = connection.put('{}{}'.format(SourceFolder, VersionToUpload), dir)
+        result = connection.put('{}{}'.format(sourceFolder, versionToUpload), dir)
         msg = "Transfered {0} to {1}"
-        logging.debug(msg.format(VersionToUpload, connection))
+        logging.debug(msg.format(versionToUpload, connection))
         # deflate the file
-        result = connection.run('unzip -u -o {}/{} -d {}'.format(dir, VersionToUpload, dir), hide=True)
+        result = connection.run('unzip -u -o {}/{} -d {}'.format(dir, versionToUpload, dir), hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         # Delete the archive
-        result = connection.run('rm {}/{}'.format(dir, VersionToUpload), hide=True)
+        result = connection.run('rm {}/{}'.format(dir, versionToUpload), hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         # fix permissions
@@ -69,36 +72,56 @@ def transfert_new_version(connection, dir):
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
     except Exception as e :
-        logging.error('Could not deploy : {}'.format(VersionToUpload), exc_info=e)
+        logging.error('Could not deploy : {}'.format(versionToUpload), exc_info=e)
 
+'''
 
-def start_daemon(connection, dir):
+'''
+def start_daemon(connection, dir, wallet_dir=""):
     # Restart the daemon
     try:
-        result = connection.run('{}/polisd -daemon -reindex'.format(dir), hide=True)
+        conx_str = '{}/polisd -daemon -reindex'.format(dir)
+        if wallet_dir != "" :
+            conx_str += " --datadir=" + wallet_dir
+        result = connection.run(conx_str, hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
     except Exception as e :
         logging.error('Could not start  : {}'.format('polisd'), exc_info=e)
 
+'''
 
-def main():
+'''
+def init():
     # create logger
     logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler('debug.log')
     fh.setLevel(logging.DEBUG)
     ch = logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-
     logger.addHandler(fh)
     logger.addHandler(ch)
 
-    #
-    for cnx in ConnectionsList:
+'''
+
+'''
+def main():
+    init()
+
+    if len(sys.argv) > 2:
+        file = open(sys.argv[1], "r")
+    else:
+        file = open("config_test.json", "r")
+    config = json.load(file)
+
+    for cnx in config["masternodes"]:
         # noinspection PyBroadException
         try :
-            connection = Connection(cnx[0], connect_timeout=30)
-            target_directory = cnx[1]
+            kwargs = {"connect_timeout=": 30}
+            if "connection_certificate" in cnx :
+                kwargs["key_filename="] = cnx["connection_certificate"]
+            connection = Connection(cnx["connection_string"], kwargs)
+            target_directory = cnx["destination_folder"]
 
             # Create directory if does not exist
             create_polis_directory(connection, target_directory)
@@ -107,15 +130,19 @@ def main():
             stop_daemon(connection, target_directory)
 
             # Transfert File to remote directory
-            transfert_new_version(connection, target_directory)
+            transfert_new_version(connection, target_directory, config["SourceFolder"], config["VersionToUpload"])
 
             # Start the new daemon
-            start_daemon(connection, target_directory)
+            if "wallet_directories" in cnx :
+                for wallet in cnx["wallet_directories"]:
+                    start_daemon(connection, target_directory, wallet["wallet_directory"])
+            else:
+                start_daemon(connection, target_directory)
 
-            logging.info('{} Has been  successfully upgraded'.format(cnx[0]))
+            logging.info('{} Has been  successfully upgraded'.format(cnx["connection_string"]))
 
         except Exception as e:
-            logging.error('Could not upgrade {}'.format(cnx[0]), exc_info=e)
+            logging.error('Could not upgrade {}'.format(cnx["connection_string"]), exc_info=e)
 
 
 if __name__ == '__main__':
