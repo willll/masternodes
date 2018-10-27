@@ -118,7 +118,7 @@ def main():
         # noinspection PyBroadException
         try :
             if "connection_certificate" in cnx :
-                connection = Connection(cnx["connection_string"], connect_timeout=30, key_filename=cnx["connection_certificate"])
+                connection = Connection(cnx["connection_string"], connect_timeout=30, connect_kwargs={'key_filename' : cnx["connection_certificate"]})
             else :
                 connection = Connection(cnx["connection_string"], connect_timeout=30)
             target_directory = cnx["destination_folder"]
