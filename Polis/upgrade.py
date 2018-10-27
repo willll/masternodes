@@ -117,10 +117,10 @@ def main():
     for cnx in config["masternodes"]:
         # noinspection PyBroadException
         try :
-            kwargs = {"connect_timeout=": 30}
             if "connection_certificate" in cnx :
-                kwargs["key_filename="] = cnx["connection_certificate"]
-            connection = Connection(cnx["connection_string"], kwargs)
+                connection = Connection(cnx["connection_string"], connect_timeout=30, key_filename=cnx["connection_certificate"])
+            else :
+                connection = Connection(cnx["connection_string"], connect_timeout=30)
             target_directory = cnx["destination_folder"]
 
             # Create directory if does not exist
