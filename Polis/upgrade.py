@@ -5,6 +5,11 @@ import json
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit
 
+'''
+    Globals
+'''
+default_wallet_dir = ""
+default_wallet_conf_file = ""
 
 '''
 
@@ -53,7 +58,7 @@ def stop_daemon(connection, dir):
 '''
 
 '''
-def transfert_new_version(connection, dir, sourceFolder, versionToUpload):
+def transfer_new_version(connection, dir, sourceFolder, versionToUpload):
     try:
         # Transfer the inflated to file to the target
         result = connection.put('{}{}'.format(sourceFolder, versionToUpload), dir)
@@ -77,11 +82,50 @@ def transfert_new_version(connection, dir, sourceFolder, versionToUpload):
 '''
 
 '''
-def start_daemon(connection, dir, wallet_dir=""):
+def clean_up_wallet_dir(connection, wallet_dir):
+    resources_to_delete = ["chainstate", "blocks", "peers.dat"]
+    to_delete_str = " ".join(wallet_dir + str(x) for x in resources_to_delete)
+    try:
+        if wallet_dir == "" :
+            raise Exception('Missing wallet directory')
+        conx_str = 'rm -rf {}'.format(to_delete_str)
+        result = connection.run(conx_str, hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+    except UnexpectedExit as e :
+        logging.error('Could not delete : {}'.format(to_delete_str), exc_info=e)
+
+
+'''
+
+'''
+def clean_up_config(connection, wallet_config_file, option):
+    try:
+        if wallet_config_file == "" :
+            raise Exception('Missing wallet configuration file')
+        conx_str = ""
+        if option == "clear addnode" :
+            conx_str = "sed -i '/^addnode/d' {}".format(wallet_config_file)
+        elif option == "clear connection" :
+            conx_str = "sed -i '/^connection/d' {}".format(wallet_config_file)
+        else :
+            raise Exception('Invalid option')
+        result = connection.run(conx_str, hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+    except UnexpectedExit as e :
+        logging.error('Could not clean up : {}'.format(wallet_config_file), exc_info=e)
+
+
+
+'''
+
+'''
+def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False):
     # Restart the daemon
     try:
         conx_str = '{}/polisd -daemon -reindex'.format(dir)
-        if wallet_dir != "" :
+        if wallet_dir != "" and use_wallet_dir :
             conx_str += " --datadir=" + wallet_dir
         result = connection.run(conx_str, hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
@@ -111,16 +155,25 @@ def main():
     if len(sys.argv) > 2:
         file = open(sys.argv[1], "r")
     else:
-        file = open("config_test.json", "r")
+        file = open("config.json", "r")
     config = json.load(file)
+
+    default_wallet_dir = config["Polis"]["default_wallet_dir"]
+    default_wallet_conf_file = config["Polis"]["default_wallet_conf_file"]
 
     for cnx in config["masternodes"]:
         # noinspection PyBroadException
         try :
+            kwargs = {}
             if "connection_certificate" in cnx :
-                connection = Connection(cnx["connection_string"], connect_timeout=30, connect_kwargs={'key_filename' : cnx["connection_certificate"]})
+                kwargs['key_filename'] = cnx["connection_certificate"]
             else :
-                connection = Connection(cnx["connection_string"], connect_timeout=30)
+                # Must be mutually excluded
+                if "connection_password" in cnx:
+                    kwargs['password'] = cnx["connection_password"]
+
+            connection = Connection(cnx["connection_string"], connect_timeout=30, connect_kwargs=kwargs)
+
             target_directory = cnx["destination_folder"]
 
             # Create directory if does not exist
@@ -129,15 +182,29 @@ def main():
             # Stop the daemon if running
             stop_daemon(connection, target_directory)
 
-            # Transfert File to remote directory
-            transfert_new_version(connection, target_directory, config["SourceFolder"], config["VersionToUpload"])
+            # Transfer File to remote directory
+            transfer_new_version(connection, target_directory, config["SourceFolder"], config["VersionToUpload"])
 
-            # Start the new daemon
+            wallet_dirs = []
+            use_wallet_dir = False
+
             if "wallet_directories" in cnx :
                 for wallet in cnx["wallet_directories"]:
-                    start_daemon(connection, target_directory, wallet["wallet_directory"])
+                    wallet_dirs.append( wallet["wallet_directory"] )
+                use_wallet_dir = True
             else:
-                start_daemon(connection, target_directory)
+                wallet_dirs = [ default_wallet_dir ]
+
+            for wallet_dir in wallet_dirs:
+                wallet_conf_file = wallet_dir+default_wallet_conf_file
+
+                # Clean up old wallet dir
+                clean_up_wallet_dir(connection, wallet_dir)
+                # Clean up the config file
+                clean_up_config(connection, wallet_conf_file, "clear addnode")
+                # Start the new daemon
+                start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
+
 
             logging.info('{} Has been  successfully upgraded'.format(cnx["connection_string"]))
 
