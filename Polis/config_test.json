@@ -2,12 +2,13 @@
     "masternodes": [
         {
             "connection_string": "root@192.168.1.2",
-            "destination_folder": "/root/Polis"
-
+            "destination_folder": "/root/Polis",
+            "password": "12345"
         },
         {
             "connection_string": "root@192.168.1.3",
             "destination_folder": "/root/Polis",
+            "connection_certificate": "/root/.ssh/my_certificate.pem",
             "comment": "Hello !",
             "wallet_directories":
                 [
@@ -21,6 +22,12 @@
 
         }
     ],
+    "Polis" : {
+        "default_wallet_dir" : "~/.poliscore/",
+        "default_wallet_conf_file" : "polis.conf",
+        "default_cli" : "polis-cli",
+        "default_daemon" : "polisd"
+    },
     "SourceFolder": "/home/me/Documents/",
     "VersionToUpload": "polis.zip"
 }
