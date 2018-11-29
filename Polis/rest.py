@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
 import time
 import sys
 import json
@@ -13,6 +13,12 @@ app = Flask(__name__)
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
+'''
+
+''' 
+def rpc_cli(action, connection, dir, wallet_dir="", use_wallet_dir=False):
+    return
+
 '''
 
 ''' 
@@ -34,7 +40,7 @@ def any_cli(action, connection, dir, wallet_dir="", use_wallet_dir=False):
 '''
 
 ''' 
-def do_action(cnx, action):
+def do_actions(cnx, actions):
     # noinspection PyBroadException
     try:
         kwargs = {}
@@ -51,14 +57,35 @@ def do_action(cnx, action):
 
         use_wallet_dir = True
         
-        result = any_cli(action, connection, target_directory, cnx["wallet_directories"][0]["wallet_directory"], use_wallet_dir )
+        results = []
+        for action in actions:
+            result = any_cli(action, connection, target_directory, cnx["wallet_directories"][0]["wallet_directory"], use_wallet_dir )
+            results.append(result)
 
         connection.close()
         logging.info('{} Has been  successfully upgraded'.format(cnx["connection_string"]))
-        return result
+        return results
     except Exception as e:
-        logging.error('Could not upgrade {}'.format(cnx["connection_string"]), exc_info=e)
+        logging.error('Could not do_action {}'.format(cnx["connection_string"]), exc_info=e)
         return 'failed'
+
+'''
+
+''' 
+@app.route('/listmn', methods=['GET'])
+def listmn(template='mnlist.html', actions = ['getinfo']): 
+    if len(sys.argv) > 2:
+        file = open(sys.argv[1], "r")
+    else:
+        file = open("config.json", "r") 
+    config = json.load(file)
+    error = None 
+
+    result=[]
+    for cnx in config["masternodes"]: 
+        result.append(do_actions(cnx,actions))
+
+    return render_template(template, masternodes=result)
 
 '''
 
@@ -75,12 +102,13 @@ def action():
 
     if request.method == 'POST':
         mns = request.form.getlist('mns')
-        action = request.form['action'] or 'getinfo'
-        result = "<p>"
+        actions = request.form.getlist('actions') or ['getinfo']
         for idx in mns: 
             #blocking do action until complete...
-            result += str(do_action(config['masternodes'][int(idx)], action))
-        result += "</p>"
+            address = config['masternodes'][int(idx)]
+            result = "<p>Masternode: "+str(address)+"</p>"
+            for r in do_actions(address, actions):
+                result += "<p>"+str(r) +"</o>\n"
 
         return result 
 
@@ -92,8 +120,9 @@ def action():
             idx+=1
 
         mnlist += "</select>\n"
-        action = "<select name=action>\n"
-        action += "\t<option value=getinfo>getinfo</option>\n"
+        action = "<select name=actions multiple>\n"
+        action += "\t<option value='getinfo'>getinfo</option>\n"
         action += "\t<option value='masternode status'>masternode status</option>\n"
+        action += "\t<option value='mnsync status'>mnsync status</option>\n"
         action += "</select>"
         return mnlist+action+ "<p><input type=submit value=submit></form>" 
