@@ -7,6 +7,10 @@ from fabric import Connection
 from invoke.exceptions import UnexpectedExit
 
 app = Flask(__name__)
+logging.basicConfig(
+    filename = "debug_rest_py.log",
+    filemode="w",
+    level = logging.INFO)
 
 '''
 
@@ -14,12 +18,6 @@ app = Flask(__name__)
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
-'''
-
-''' 
-def rpc_cli(action, connection, dir, wallet_dir="", use_wallet_dir=False):
-    return
-
 '''
 
 ''' 
@@ -128,7 +126,7 @@ def any_cli(action, connection, dir, wallet_dir="", use_wallet_dir=False):
     except UnexpectedExit as e:
         #possibly try to start polisd
         logging.warning('{} exited unexpectedly'.format('polis-cli'), exc_info=e)
-        return "Unexpected exit of polis-cli <a href='/startpolis'>start polis</a>"
+        return "UnexpectedExit"
     except Exception as e :
         logging.error('Could not getinfo: {}'.format('polis-cli'), exc_info=e)
         return "any_cli failed"
@@ -145,7 +143,7 @@ def do_action_cli(cnx, actions):
             if "password" in cnx:
                 kwargs['password'] = cnx["password"]
 
-        connection = Connection(cnx["connection_string"],  connect_timeout=30, connect_kwargs=kwargs)
+        connection = Connection(cnx["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
 
         target_directory = cnx["destination_folder"]
 
@@ -154,7 +152,10 @@ def do_action_cli(cnx, actions):
         results = []
         for action in actions:
             result = any_cli(action, connection, target_directory, cnx["wallet_directories"][0]["wallet_directory"], use_wallet_dir )
-            results.append(result.stdout)
+            if result != 'UnexpectedExit':
+                results.append(result.stdout)
+            else:
+                results.append('{"status":"Masternode probably down"}')
         
 
         connection.close()
@@ -165,8 +166,10 @@ def do_action_cli(cnx, actions):
         return 'exception'
 
 '''
+list all mns, this is not so good because it's blocking and waits to get everything
 ''' 
-@app.route('/listmn', methods=['GET'])
+
+@app.route('/listmn',endpoint='listmn',methods=['GET'])
 def listmn(template='mnlist.html', actions = ['getinfo']): 
     if len(sys.argv) > 2:
         file = open(sys.argv[1], "r")
@@ -181,10 +184,51 @@ def listmn(template='mnlist.html', actions = ['getinfo']):
         result.append(do_action_cli(cnx,actions))
 
     return render_template(template, masternodes=result)
-
 '''
+returns rendered list of masternodes (mnlist-jquery.html), with a list of masternodes to preload into DOM
+TODO: change config format to  IP:{...information about masternode..}
+'''
+@app.route('/masternodes',endpoint='masternodes', methods=['GET'])
+def masternodes(template="mnlist-jquery.html"):
+    if len(sys.argv) > 2:
+        file = open(sys.argv[1], "r")
+    else:
+        file = open("config.json", "r") 
+    config = json.load(file)
+    error = None 
 
+    preload = []
+    idx=0
+    for mn in config["masternodes"]: 
+        preload.append({"cnx":mn["connection_string"],"idx":idx})
+        idx+=1
+
+    logging.info("Returning preloaded template for frontend") 
+    return render_template(template, masternodes=preload)
+'''
+returns json of masternode status request to provided mn
 ''' 
+@app.route('/masternode/status', methods=['GET'])
+def mnstatus(actions = ['getinfo']): 
+    if len(sys.argv) > 2:
+        file = open(sys.argv[1], "r")
+    else:
+        file = open("config.json", "r") 
+    config = json.load(file)
+    error = None 
+
+    mnidx = request.args.get('mnidx', 0, type=int)
+
+    actions = ["masternode status"]
+    result = ''
+    logging.info("{} requested for mn {}".format(actions,mnidx)) 
+
+    [result] = do_action_cli(config["masternodes"][mnidx],actions)
+
+    logging.info("returning : {} ".format(result)) 
+    return result 
+'''
+'''
 @app.route('/action', methods=['POST', 'GET'])
 def action():
 
