@@ -24,22 +24,42 @@
     });
     */
 
+  function updateStatus(mn_status)
+    {
+      mn_status.text('Updating...')
+
+      $.getJSON($SCRIPT_ROOT+'/cli/masternode/status', { mnidx: mn_status.attr("id")  }, function(data) {
+          console.log("Loading details for mn; "+ mn_status.attr("id"));
+          console.log(data)
+          
+          if(data.status.startsWith("restart"))
+          {
+              mn_status.text("Down, Restart mn daemon:")
+              mn_status.append("<a href='/daemon/launch?mn="+mn_status.attr("id")+"'>start polisd</a>");
+          }
+          else{
+              mn_status.text(data.status)
+          }
+          
+          // Fill table with masternode list.
+          // data: should contain json with IP:index in list and name of masternode( if in config) 
+      }); 
+
+    }
+  $('.update').bind('click', function() {
+      var id = '#'+$(this).attr('id')
+
+      console.log("Updating status for : "+ id);
+      updateStatus($(id)) 
+  });
+
   $( document ).ready(function() {
       console.log("Document ready")
 
       $(".status").each(function(){ 
           var mn_status = $(this); 
           console.log("Filling up masternodes table"+ mn_status.attr("id"));
-
-          $.getJSON($SCRIPT_ROOT+'/masternode/status', { mnidx: mn_status.attr("id")  }, function(data) {
-              console.log("Loading details for mn; "+ mn_status.attr("id"));
-              console.log(data)
-              
-              mn_status.text(data.status)
-              
-              // Fill table with masternode list.
-              // data: should contain json with IP:index in list and name of masternode( if in config) 
-          }); 
+          updateStatus(mn_status)
       });
   });
 </script>
@@ -48,7 +68,7 @@
 
     <ul id="masternodes">
     {% for item in masternodes %}
-    <li>{{ item.cnx }} | {{item.idx}} <div class="status" id="{{item.idx}}"/> </li>
+    <li>{{ item.cnx }} | <button class='update' id='{{ item.idx }}' href='#'>update {{item.idx}}</button> <div class='status' id='{{item.idx}}'/>   </li>
     {% endfor %}
     </ul>
 

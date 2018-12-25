@@ -41,7 +41,7 @@ def any_daemon(action, connection, dir, wallet_dir="", use_wallet_dir=False):
 
 this can be used to restart daemon if getinfo isnt responding, and mn is down likely because it crashed
 '''
-def do_action_daemon(cnx, actions):
+def do_action_daemon(cnx, actions = ['--daemon']):
     try:
         kwargs = {}
         if "connection_certificate" in cnx :
@@ -56,10 +56,7 @@ def do_action_daemon(cnx, actions):
         target_directory = cnx["destination_folder"]
 
         use_wallet_dir = True
-        
 
-        if len(actions) == 0 :
-            actions=['--daemon']
         results = []
         for action in actions:
             result = any_daemon(action, connection, target_directory, cnx["wallet_directories"][0]["wallet_directory"], use_wallet_dir )
@@ -72,7 +69,8 @@ def do_action_daemon(cnx, actions):
         logging.error('Could not do_action_daemon {}'.format(cnx["connection_string"]), exc_info=e)
         return 'failed'
 '''
-''' 
+Offers a page with all mns and possibility to restart one by selecting
+'''
 @app.route('/startpolis', methods=['GET', 'POST'])
 def start_polisd():
     if len(sys.argv) > 2:
@@ -90,7 +88,7 @@ def start_polisd():
             address = config['masternodes'][int(idx)]
             result = "<p>Masternode: "+str(address)+"</p>"
             for r in do_action_daemon(address, actions):
-                result += "<p>"+str(r) +"</o>\n"
+                result += "<p>"+str(r) +"</p>\n"
                 
         logging.info('finished looping') 
         return result+" <a href=/listmn>List MN</a>"
@@ -155,7 +153,7 @@ def do_action_cli(cnx, actions):
             if result != 'UnexpectedExit':
                 results.append(result.stdout)
             else:
-                results.append('{"status":"Masternode probably down"}')
+                results.append('{"status":"restart"}')
         
 
         connection.close()
@@ -168,7 +166,6 @@ def do_action_cli(cnx, actions):
 '''
 list all mns, this is not so good because it's blocking and waits to get everything
 ''' 
-
 @app.route('/listmn',endpoint='listmn',methods=['GET'])
 def listmn(template='mnlist.html', actions = ['getinfo']): 
     if len(sys.argv) > 2:
@@ -184,6 +181,58 @@ def listmn(template='mnlist.html', actions = ['getinfo']):
         result.append(do_action_cli(cnx,actions))
 
     return render_template(template, masternodes=result)
+'''
+Endpoint for getinfo on specific mn
+'''
+@app.route('/cli/getinfo', methods=[])
+def cli_getinfo():
+    if len(sys.argv) > 2:
+        file = open(sys.argv[1], "r")
+    else:
+        file = open("config.json", "r") 
+    config = json.load(file) 
+    
+    mn_idx = request.args.get('mn')
+    action = ['getinfo']
+    result = do_action_cli(config['masternodes'][mn_idx],action)
+
+    logging.info("{} requested for mn {} returning {}".format(actions,mnidx,result)) 
+    return result 
+'''
+Endpoint for mnsync staus on specific mn
+'''
+@app.route('/cli/mnsync/status', methods=[])
+def cli_mnsync_status():
+    if len(sys.argv) > 2:
+        file = open(sys.argv[1], "r")
+    else:
+        file = open("config.json", "r") 
+    config = json.load(file) 
+    
+    mn_idx = request.args.get('mn')
+    action = ['mnsync status']
+    result = do_action_cli(config['masternodes'][mn_idx],action)
+
+    logging.info("{} requested for mn {} returning {}".format(actions,mnidx,result)) 
+    return result 
+'''
+REST endpoint to launch polisd on given server
+TODO:
+    It would be useful to have some feedback to the front end as to the status
+    maybe a websocket update of getinfo and mnsync status.
+''' 
+@app.route('/daemon/launch', methods=['GET'])
+def daemon_masternode_start():
+    if len(sys.argv) > 2:
+        file = open(sys.argv[1], "r")
+    else:
+        file = open("config.json", "r") 
+    config = json.load(file) 
+    
+    mn_idx = request.args.get('mn')
+    [result] = do_action_daemon(config['masternodes'][int(mn_idx)])
+    logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
+    return result 
 '''
 returns rendered list of masternodes (mnlist-jquery.html), with a list of masternodes to preload into DOM
 TODO: change config format to  IP:{...information about masternode..}
@@ -208,7 +257,7 @@ def masternodes(template="mnlist-jquery.html"):
 '''
 returns json of masternode status request to provided mn
 ''' 
-@app.route('/masternode/status', methods=['GET'])
+@app.route('/cli/masternode/status', methods=['GET'])
 def mnstatus(actions = ['getinfo']): 
     if len(sys.argv) > 2:
         file = open(sys.argv[1], "r")
@@ -221,11 +270,9 @@ def mnstatus(actions = ['getinfo']):
 
     actions = ["masternode status"]
     result = ''
-    logging.info("{} requested for mn {}".format(actions,mnidx)) 
-
     [result] = do_action_cli(config["masternodes"][mnidx],actions)
 
-    logging.info("returning : {} ".format(result)) 
+    logging.info("{} requested for mn {} returning {}".format(actions,mnidx,result)) 
     return result 
 '''
 '''
