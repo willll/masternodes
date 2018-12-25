@@ -2,16 +2,63 @@
 <html lang="en">
 <head>
     <title>Masternode List</title>
+
 </head>
 <body>
+
+<script type=text/javascript>
+  $(function() {
+    $('a#loadmn').bind('click', function() {
+      $.getJSON($SCRIPT_ROOT + '/masternodestatus', {
+        mnidx: $('input[name="a"]').val(),
+      }, function(data) {
+        $("#result").text(data.result);
+      });
+      return false;
+    });
+
+  $( document ).ready(function() {
+		  $.getJSON($SCRIPT_ROOT+'', {  }, function(data) {
+				  // Fill table with masternode list.
+				  // data: should contain json with IP:index in list and name of masternode( if in config)
+				  
+				  });
+		  
+		$('a#loadmn').bind('click', function() {
+				$.getJSON($SCRIPT_ROOT + '/masternodestatus', {
+						mnidx: $('input[name="a"]').val(),
+				}, function(data) {
+						$("#result").text(data.result);
+				});
+		return false;
+}
+  });
+</script>
+<h1>jQuery Masternode update status</h1>
+<p><input type=text size=5 name=a> +
+
+
     <ul id="masternodes">
     {% for item in masternodes %}
-    <li>{{ item }}</li>
+	    <li>{{ item }}</li>
     {% endfor %}
     </ul>
 
-    <h1></h1>
 
-    {# a comment #}
+<p><a href=# id=calculate>calculate server side</a>
+
+
+    <ul id="masternodes">
+    {% for item in masternodes %}
+	    <li>{{ item }}</li>
+    {% endfor %}
+    </ul>
+
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="{{ url_for('static', filename='js/jquery.js') }}">\x3C/script>')</script>
+	<script type=text/javascript>
+		  $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+	</script>
 </body>
 </html>
