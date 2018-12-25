@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Masternode List</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="{{ url_for('static', filename='js/jquery.js') }}">\x3C/script>')</script>
+	<script type=text/javascript>
+		  $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+	</script>
+
+</head>
+<body>
+
+<script type=text/javascript>
+    /*
+  $(function() {
+    $('a#loadmn').bind('click', function() {
+      $.getJSON($SCRIPT_ROOT + '/masternodestatus', {
+        mnidx: $('input[name="a"]').val(),
+      }, function(data) {
+        $("#result").text(data.result);
+      });
+      return false;
+    });
+    */
+
+  $( document ).ready(function() {
+      console.log("Document ready")
+
+      $(".status").each(function(){ 
+          var mn_status = $(this); 
+          console.log("Filling up masternodes table"+ mn_status.attr("id"));
+
+          $.getJSON($SCRIPT_ROOT+'/masternode/status', { mnidx: mn_status.attr("id")  }, function(data) {
+              console.log("Loading details for mn; "+ mn_status.attr("id"));
+              console.log(data)
+              
+              mn_status.text(data.status)
+              
+              // Fill table with masternode list.
+              // data: should contain json with IP:index in list and name of masternode( if in config) 
+          }); 
+      });
+  });
+</script>
+<h1>jQuery Masternode update status</h1>
+
+
+    <ul id="masternodes">
+    {% for item in masternodes %}
+    <li>{{ item.cnx }} | {{item.idx}} <div class="status" id="{{item.idx}}"/> </li>
+    {% endfor %}
+    </ul>
+
+
+
+    {#    <ul id="masternodes">
+    {% for item in masternodes %}
+	    <li>{{ item }}</li>
+    {% endfor %}
+    </ul>
+    #}}
+
+</body>
+</html>
