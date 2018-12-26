@@ -1,12 +1,16 @@
-from flask import Flask, request, render_template
 import time
 import sys
 import json
 import logging
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit
+from klein import Klein
+import requests 
+from twisted.web.template import Element, renderer, XMLFile
+from twisted.python.filepath import FilePath
+import jinja2
 
-app = Flask(__name__)
+app = Klein()
 logging.basicConfig(
     filename = "debug_rest_py.log",
     filemode="w",
@@ -16,11 +20,26 @@ logging.basicConfig(
 
 ''' 
 @app.route('/')
-def hello_world():
+def hello_world(request):
     return 'Hello, World!'
 '''
-
+Temporary fix for templating
 ''' 
+import jinja2
+
+def render_without_request(template_name, **template_vars):
+    """
+    Usage is the same as flask.render_template:
+
+    render_without_request('my_template.html', var1='foo', var2='bar')
+    """
+    env = jinja2.Environment(
+        loader=jinja2.PackageLoader('rest','templates')
+    )
+    template = env.get_template(template_name)
+    return template.render(**template_vars)
+'''
+'''
 def any_daemon(action, connection, dir, wallet_dir="", use_wallet_dir=False):
     try:
         conx_str = '{}/polisd'.format(dir)
@@ -72,11 +91,8 @@ def do_action_daemon(cnx, actions = ['--daemon']):
 Offers a page with all mns and possibility to restart one by selecting
 '''
 @app.route('/startpolis', methods=['GET', 'POST'])
-def start_polisd():
-    if len(sys.argv) > 2:
-        file = open(sys.argv[1], "r")
-    else:
-        file = open("config.json", "r") 
+def start_polisd(request):
+    file = open("config.json", "r") 
     config = json.load(file)
     error=None
 
@@ -166,12 +182,9 @@ def do_action_cli(cnx, actions):
 '''
 list all mns, this is not so good because it's blocking and waits to get everything
 ''' 
-@app.route('/listmn',endpoint='listmn',methods=['GET'])
-def listmn(template='mnlist.html', actions = ['getinfo']): 
-    if len(sys.argv) > 2:
-        file = open(sys.argv[1], "r")
-    else:
-        file = open("config.json", "r") 
+@app.route('/listmn',methods=['GET'])
+def listmn(request): 
+    file = open("config.json", "r") 
     config = json.load(file)
     error = None 
 
@@ -180,16 +193,13 @@ def listmn(template='mnlist.html', actions = ['getinfo']):
     for cnx in config["masternodes"]: 
         result.append(do_action_cli(cnx,actions))
 
-    return render_template(template, masternodes=result)
+    return render_without_request(template, masternodes=result)
 '''
 Endpoint for getinfo on specific mn
 '''
 @app.route('/cli/getinfo', methods=[])
-def cli_getinfo():
-    if len(sys.argv) > 2:
-        file = open(sys.argv[1], "r")
-    else:
-        file = open("config.json", "r") 
+def cli_getinfo(request):
+    file = open("config.json", "r") 
     config = json.load(file) 
     
     mn_idx = request.args.get('mn')
@@ -201,12 +211,9 @@ def cli_getinfo():
 '''
 Endpoint for mnsync staus on specific mn
 '''
-@app.route('/cli/mnsync/status', methods=[])
-def cli_mnsync_status():
-    if len(sys.argv) > 2:
-        file = open(sys.argv[1], "r")
-    else:
-        file = open("config.json", "r") 
+@app.route('/cli/mnsync/status', methods=['GET'])
+def cli_mnsync_status(request):
+    file = open("config.json", "r") 
     config = json.load(file) 
     
     mn_idx = request.args.get('mn')
@@ -222,11 +229,8 @@ TODO:
     maybe a websocket update of getinfo and mnsync status.
 ''' 
 @app.route('/daemon/launch', methods=['GET'])
-def daemon_masternode_start():
-    if len(sys.argv) > 2:
-        file = open(sys.argv[1], "r")
-    else:
-        file = open("config.json", "r") 
+def daemon_masternode_start(request):
+    file = open("config.json", "r") 
     config = json.load(file) 
     
     mn_idx = request.args.get('mn')
@@ -237,14 +241,12 @@ def daemon_masternode_start():
 returns rendered list of masternodes (mnlist-jquery.html), with a list of masternodes to preload into DOM
 TODO: change config format to  IP:{...information about masternode..}
 '''
-@app.route('/masternodes',endpoint='masternodes', methods=['GET'])
-def masternodes(template="mnlist-jquery.html"):
-    if len(sys.argv) > 2:
-        file = open(sys.argv[1], "r")
-    else:
-        file = open("config.json", "r") 
+@app.route('/masternodes', methods=['GET'])
+def masternodes(request):
+    file = open("config.json", "r") 
     config = json.load(file)
     error = None 
+    template="mnlist-jquery.html"
 
     preload = []
     idx=0
@@ -253,36 +255,32 @@ def masternodes(template="mnlist-jquery.html"):
         idx+=1
 
     logging.info("Returning preloaded template for frontend") 
-    return render_template(template, masternodes=preload)
+    return render_without_request(template, masternodes=preload)
 '''
 returns json of masternode status request to provided mn
 ''' 
 @app.route('/cli/masternode/status', methods=['GET'])
-def mnstatus(actions = ['getinfo']): 
-    if len(sys.argv) > 2:
-        file = open(sys.argv[1], "r")
-    else:
-        file = open("config.json", "r") 
+def mnstatus(request): 
+    file = open("config.json", "r") 
     config = json.load(file)
     error = None 
 
-    mnidx = request.args.get('mnidx', 0, type=int)
-
+    #sometimes gets Nonetype. 
+    mnidx = request.args.get('mnidx') or 0 
+    
     actions = ["masternode status"]
     result = ''
-    [result] = do_action_cli(config["masternodes"][mnidx],actions)
+    [result] = do_action_cli(config["masternodes"][int(mnidx)],actions)
 
     logging.info("{} requested for mn {} returning {}".format(actions,mnidx,result)) 
     return result 
 '''
+Remove unnecessary
 '''
 @app.route('/action', methods=['POST', 'GET'])
-def action():
+def action(request):
 
-    if len(sys.argv) > 2:
-        file = open(sys.argv[1], "r")
-    else:
-        file = open("config.json", "r") 
+    file = open("config.json", "r") 
     config = json.load(file)
     error = None 
 
@@ -313,3 +311,8 @@ def action():
         action += "\t<option value='mnsync status'>mnsync status</option>\n"
         action += "</select>"
         return mnlist+action+ "<p><input type=submit value=submit></form>" 
+
+
+ 
+if __name__ == "__main__":
+    app.run("localhost", 5000)

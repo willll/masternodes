@@ -3,32 +3,17 @@
 <head>
     <title>Masternode List</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script>window.jQuery || document.write('<script src="{{ url_for('static', filename='js/jquery.js') }}">\x3C/script>')</script>
-	<script type=text/javascript>
-		  $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
-	</script>
 
 </head>
 <body>
 
 <script type=text/javascript>
-    /*
-  $(function() {
-    $('a#loadmn').bind('click', function() {
-      $.getJSON($SCRIPT_ROOT + '/masternodestatus', {
-        mnidx: $('input[name="a"]').val(),
-      }, function(data) {
-        $("#result").text(data.result);
-      });
-      return false;
-    });
-    */
 
   function updateStatus(mn_status)
     {
       mn_status.text('Updating...')
 
-      $.getJSON($SCRIPT_ROOT+'/cli/masternode/status', { mnidx: mn_status.attr("id")  }, function(data) {
+      $.getJSON('/cli/masternode/status', { mnidx: mn_status.attr("id")  }, function(data) {
           console.log("Loading details for mn; "+ mn_status.attr("id"));
           console.log(data)
           
@@ -46,26 +31,36 @@
       }); 
 
     }
-  $('.update').bind('click', function() {
-      var id = '#'+$(this).attr('id')
+    $('.update').bind('click', function() {
+        var id = '#'+$(this).attr('id')
 
-      console.log("Updating status for : "+ id);
-      updateStatus($(id)) 
-  });
+        console.log("Updating status for : "+ id);
+        updateStatus($(id)) 
+    });
+    $('.upodateAll').bind('click', function() {
+        console.log("UIpdate all" );
+        updateAll();
 
+    });
+
+    function updateAll() 
+    { 
+        $(".status").each(function(){ 
+            var mn_status = $(this); 
+            console.log("Filling up masternodes table"+ mn_status.attr("id"));
+            updateStatus(mn_status)
+        }); 
+    }
   $( document ).ready(function() {
       console.log("Document ready")
+      updateAll();
 
-      $(".status").each(function(){ 
-          var mn_status = $(this); 
-          console.log("Filling up masternodes table"+ mn_status.attr("id"));
-          updateStatus(mn_status)
-      });
-  });
+    });
 </script>
 <h1>jQuery Masternode update status</h1>
 
 
+<button class-'updateAll'>Update all</button>
     <ul id="masternodes">
     {% for item in masternodes %}
     <li>{{ item.cnx }} | <button class='update' id='{{ item.idx }}' href='#'>update {{item.idx}}</button> <div class='status' id='{{item.idx}}'/>   </li>
