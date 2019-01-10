@@ -5,33 +5,29 @@ import logging
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit
 from klein import Klein
-from twisted.web.template import Element, renderer, XMLFile
-from twisted.python.filepath import FilePath
-from twisted.internet.defer import inlineCallbacks, returnValue
+import jinja2
 
 file = open("config.json", "r") 
 config = json.load(file)
 
 app = Klein()
+
 logging.basicConfig(
     filename = "debug_rest_py.log",
     filemode="w",
     level = logging.INFO)
 
 '''
-
 ''' 
 @app.route('/')
 def hello_world(request):
-    return 'Hello, World! <a href="/mns/list">Masternodes</a> <a href="/startpolis">Start Polis</a> <a href=''>Masternodes</a> '
+    return 'Hello, World! <a href="/mns/list">Masternodes</a> <a href="/daemon/startpolis">Start Polis</a> <a href=''>Masternodes</a> '
 '''
 Temporary fix for templating
 TODO: 
     Replace with twisted templating, 
     REMOVE
 ''' 
-import jinja2
-
 def render_without_request(template_name, **template_vars):
     """
     Usage is the same as flask.render_template:
@@ -45,6 +41,27 @@ def render_without_request(template_name, **template_vars):
     return template.render(**template_vars)
 '''
 '''
+async def shell_actions(action, connection, dir, wallet_dir="", use_wallet_dir=False):
+    try:
+        # list of actions that are accepted
+        actions = {'clean_wallet':'', 
+                'kill_daemon':'',
+                'view_crontab':'',
+                'view_script':'',
+                'start_polis':''}
+
+        
+        result = await connection.run(conx_str, hide=False)
+        logging.info(">>> Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
+
+        return result
+    except Exception as e :
+        logging.error('Could not getinfo  : {}'.format('polisd'), exc_info=e)
+        return "failed"
+
+
+'''
+'''
 async def any_daemon(action, connection, dir, wallet_dir="", use_wallet_dir=False):
     try:
         conx_str = '{}/polisd'.format(dir)
@@ -53,8 +70,7 @@ async def any_daemon(action, connection, dir, wallet_dir="", use_wallet_dir=Fals
         conx_str += " "+action
 
         result = await connection.run(conx_str, hide=False)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        logging.info("Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
 
         return result
     except Exception as e :
@@ -179,58 +195,79 @@ async def async_dacli(masternode,actions):
         logging.error('Could not do_action {} : {}'.format(masternode["connection_string"], e), exc_info=e)
         return 'exception' 
 '''
-startpolis
-Serves a page with all mns and possibility to restart one by selecting
+Sub routes pertaining to polis-cli actions
 '''
-@app.route('/startpolis', methods=['GET', 'POST'])
-def start_polisd(request):
+with app.subroute("/daemon") as daemon:
+    '''
+    startpolis
+    Serves a page with all mns and possibility to restart one by selecting
+    '''
+    @daemon.route('/startpolis', methods=['GET', 'POST'])
+    def start_polisd(request):
 
-    if request.method == 'POST':
-        mns = request.form.getlist('mns')
-        actions = request.form.getlist('params')
-        result='Attempted starting: '+', '.join(mns)
-        for idx in mns: 
-            address = config['masternodes'][int(idx)]
-            result = "<p>Masternode: "+str(address)+"</p>"
-            for r in do_action_daemon(address, actions):
-                result += "<p>"+str(r) +"</p>\n"
-                
-        logging.info('finished looping') 
-        return result+" <a href=/cli/masternodes></a>"
-    else:
-        #diisplay list of all MNs with "start" button
-        mnlist = "<form method='POST'>\n<select name=mns multiple>\n"
-        idx = 0 
-        for masternode in config["masternodes"]: 
-            mnlist += "\t<option value='" + str(idx)+ "'>"+ masternode['connection_string']+"</option>\n"
-            idx+=1
+        if request.method == 'POST':
+            mns = request.form.getlist('mns')
+            actions = request.form.getlist('params')
+            result='Attempted starting: '+', '.join(mns)
+            for idx in mns: 
+                address = config['masternodes'][int(idx)]
+                result = "<p>Masternode: "+str(address)+"</p>"
+                for r in do_action_daemon(address, actions):
+                    result += "<p>"+str(r) +"</p>\n"
+                    
+            logging.info('finished looping') 
+            return result+" <a href=/mns/cli/masternodes/status></a>"
+        else:
+            #diisplay list of all MNs with "start" button
+            mnlist = "<form method='POST'>\n<select name=mns multiple>\n"
+            idx = 0 
+            for masternode in config["masternodes"]: 
+                mnlist += "\t<option value='" + str(idx)+ "'>"+ masternode['connection_string']+"</option>\n"
+                idx+=1
 
-        mnlist += "</select>\n"
-        return mnlist+ "<p><input type=submit value=start></form>" 
+            mnlist += "</select>\n"
+            return mnlist+ "<p><input type=submit value=start></form>" 
 
-'''
-REST endpoint to launch polisd on given server
-TODO:
-    It would be useful to have some feedback to the front end as to the status
-    maybe a websocket update of getinfo and mnsync status.
-''' 
-@app.route('/daemon/launch', methods=['GET'])
-def daemon_masternode_start(request):
-    
-    mn_idx = request.args.get('mn')
-    [result] = do_action_daemon(config['masternodes'][int(mn_idx)])
-    logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
-    return result 
+    '''
+    REST endpoint to launch polisd on given server
+    TODO:
+        It would be useful to have some feedback to the front end as to the status
+        maybe a websocket update of getinfo and mnsync status.
+    ''' 
+    @daemon.route('/launch', methods=['GET'])
+    def daemon_masternode_start(request):
+        
+        mn_idx = request.args.get('mn')
+        [result] = do_action_daemon(config['masternodes'][int(mn_idx)])
+        logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
+        return result 
+    '''
+    REST endpoint to clean up wallet dir (rm blockchain files) start daemon with -resync
+    TODO:
+    '''
+
+
+    '''
+    Create a new MN:
+    Deploy a new MN based on form information, also save it to config
+    TODO: 
+        - Form which takes: IP of new VPS, password of vps, tx output optional (eventually generate automatically here through request)
+        - Runs script to update VPS, copy polis binary from local, generate priv key, install sentinel and crontab job, install sscript to watch daemon every minute and relaunch it 
+    '''
+    @daemon.route('/create',methods=['POST'])
+    async def deploy_mn(request):
+        return 'Created' 
+
 
 '''
 Sub routes pertaining to polis-cli actions
 '''
-with app.subroute("/mns") as app:
+with app.subroute("/mns") as mns:
     '''
     returns rendered list of masternodes (mnlist-jquery.html), with a list of masternodes to preload into DOM
     TODO: change config format to  IP:{...information about masternode..}
     '''
-    @app.route('/list', methods=['GET'])
+    @mns.route('/list', methods=['GET'])
     def masternodes(request):
         file = open("config.json", "r") 
         config = json.load(file)
@@ -248,7 +285,7 @@ with app.subroute("/mns") as app:
     '''
     Nonblocking masternode status request using await
     '''
-    @app.route('/cli/masternode/status', methods=['GET'])
+    @mns.route('/cli/masternode/status', methods=['GET'])
     async def cli_mn_status(request):
         
         mnidx = int(request.args.get(b'mnidx', [0])[0])
@@ -264,7 +301,7 @@ with app.subroute("/mns") as app:
     actidx: the action 
     mnidx: index of the masternode
     '''
-    @app.route('/cli/action', methods=['GET'])
+    @mns.route('/cli/action', methods=['GET'])
     async def cli_mn_action(request):
         
         mnidx = int(request.args.get(b'mnidx', [0])[0])
@@ -276,19 +313,6 @@ with app.subroute("/mns") as app:
         logging.info("{} no blocking masternode status requested for mn {}  ".format(action,mnidx)) 
         return result
 
-
-'''
-Create a new MN:
-Deploy a new MN based on form information, also save it to config
-TODO: 
-    - Form which takes: IP of new VPS, password of vps, tx output optional (eventually generate automatically here through request)
-    - Runs script to update VPS, copy polis binary from local, generate priv key, install sentinel and crontab job, install sscript to watch daemon every minute and relaunch it 
-'''
-@app.route('/create',methods=['POST'])
-async def deploy_mn(request):
-
-    return 'Created' 
-
+if __name__ == '__main__':
+    app.run(host=config["listen"]["host"], port=config["listen"]["port"])
  
-if __name__ == "__main__":
-    app.run("localhost", 5000)

@@ -29,5 +29,8 @@
         "default_daemon" : "polisd"
     },
     "SourceFolder": "/home/me/Documents/",
-    "VersionToUpload": "polis.zip"
+    "VersionToUpload": "polis.zip",
+    "listen": {
+	    "port":9000
+    }
 }
