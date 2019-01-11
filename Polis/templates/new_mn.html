@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Create Masternode</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+</head>
+<body>
+<h1>Create new Masternode (VPS side)</h1>
+
+<form id="create">
+	IP: <input type="text" id="ip"/><br/>
+	Password: <input type="text" id="password"/><br/>
+	port: <input type="text" id="port" value="8145"/><br/>
+	name: <input type="text" id="name" /><br/> 
+	<button class="create">Create masternode ready vps</button><br/>
+	<hr/> 
+	<div class="status" id="result"/>
+
+</form>
+
+<script type=text/javascript>
+
+  function updateStatus()
+    {
+      shell_status.text('Updating...')
+      ip = $("#create input#ip").val()
+      pw = $("#create input#password").val()
+      port = $("#create input#port").val()
+      name = $("#create input#name").val()
+
+
+      $.getJSON('/create', {ip = ip, password=pw, port = port, name = name}, function(data) {
+          console.log("Loading details for mn; ");
+          console.log(data)
+          
+          // Fill table with masternode list.
+          // data: should contain json with IP:index in list and name of masternode( if in config) 
+      }); 
+
+    }
+    $('.update').bind('click', function() {
+        updateStatus() 
+    });
+    $( document ).ready(function() {
+      console.log("Document ready")
+
+    });
+</script>
+
+</body>
+</html>
