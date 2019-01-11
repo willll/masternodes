@@ -6,6 +6,7 @@ from fabric import Connection
 from invoke.exceptions import UnexpectedExit
 from klein import Klein
 import jinja2
+import hashlib
 
 file = open("config.json", "r") 
 config = json.load(file)
@@ -201,6 +202,9 @@ with app.subroute("/daemon") as daemon:
     '''
     startpolis
     Serves a page with all mns and possibility to restart one by selecting
+
+    When given masternodes mns=[indexes,..]  and params it will try to execute: polisd params on each.
+    if no params it'll just use default --daemon (not necessary)
     '''
     @daemon.route('/startpolis', methods=['GET', 'POST'])
     def start_polisd(request):
@@ -208,19 +212,20 @@ with app.subroute("/daemon") as daemon:
         if request.method == 'POST':
             mns = request.form.getlist('mns')
             actions = request.form.getlist('params')
+
             result='Attempted starting: '+', '.join(mns)
             for idx in mns: 
                 address = config['masternodes'][int(idx)]
                 result = "<p>Masternode: "+str(address)+"</p>"
                 for r in do_action_daemon(address, actions):
                     result += "<p>"+str(r) +"</p>\n"
-                    
-            logging.info('finished looping') 
-            return result+" <a href=/mns/cli/masternodes/status></a>"
+
+            return "Result of running polisd {}: {} <br> <a href=/mns/cli/masternodes/status></a>".format(actions, result)
         else:
             #diisplay list of all MNs with "start" button
             mnlist = "<form method='POST'>\n<select name=mns multiple>\n"
             idx = 0 
+
             for masternode in config["masternodes"]: 
                 mnlist += "\t<option value='" + str(idx)+ "'>"+ masternode['connection_string']+"</option>\n"
                 idx+=1
@@ -241,23 +246,100 @@ with app.subroute("/daemon") as daemon:
         [result] = do_action_daemon(config['masternodes'][int(mn_idx)])
         logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
         return result 
-    '''
-    REST endpoint to clean up wallet dir (rm blockchain files) start daemon with -resync
-    TODO:
-    '''
+
+'''
+REST endpoint to clean up wallet dir (rm blockchain files) start daemon with -resync
+TODO:
+'''
 
 
-    '''
-    Create a new MN:
-    Deploy a new MN based on form information, also save it to config
-    TODO: 
-        - Form which takes: IP of new VPS, password of vps, tx output optional (eventually generate automatically here through request)
-        - Runs script to update VPS, copy polis binary from local, generate priv key, install sentinel and crontab job, install sscript to watch daemon every minute and relaunch it 
-    '''
-    @daemon.route('/create',methods=['POST'])
-    async def deploy_mn(request):
-        return 'Created' 
+'''
+Create a new MN:
+Deploy a new MN based on form information, also save it to config
+TODO: 
+    - Form which takes: IP of new VPS, password of vps, tx output optional (eventually generate automatically here through request)
+    - Runs script to update VPS, copy polis binary from local, generate priv key, install sentinel and crontab job, install sscript to watch daemon every minute and relaunch it 
+'''
+@app.route('/create',methods=['POST', 'GET'])
+def create(request):
+    if(request.method == "POST"):
+        logging.info('ip = {}, password = {}, port = {}, name = {}'.format(request.args.get('ip'),
+            request.args.get('password'),request.args.get('port'),request.args.get('name')))
+        
+        masternode = { 
+            "connection_sting": "{}@{}:{}".format(request.args.get('user'), request.args.get('host'),
+                request.args.get('port)')),
+            "password":request.args.get('password'),
+            "name":request.args.get("name") }
+        
+        #upload scripts to host
 
+        try:
+            polis = config["Polis"]
+        
+
+            connection = Connection(masternode["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
+            
+            # does all the apt get
+            result = connection.put(polis["preconf"], hide=False)
+            logging.info('Uploaded {}:\n {} '.format(polis["preconf"],result))
+            result = connection.run("/bin/bash {}".format(polis["preconf"]),hide=False)
+            logging.info('Ran {}:\n {}'.format(polis["preconf"],result))
+
+
+            #get polisd from another mn if not available locally (polis.zip)
+            """
+            polishash = hashlib.md5(open("polis.tgz","rb").read()).hexdigest()
+            if(polishash != config["polisHash"]):
+                #wrong version, need to get new one from top MN
+            """
+
+            connection.put(polis["preconf"]["version_to_upload"], hide=False)
+            connection.run("mkdir {} && mkdir {} && tar zxvf {} {}".format(config["WalletsFolder"], polis["default_dir"],polis["version_to_upload"],polis["default_dir"]), hide=False) 
+
+            #second part configuration script, generates privkey and gets polisd running properly
+            result = connection.put(polis["confdaemon"], hide=False)
+            logging.info('Uploaded {}:\n {}'.format(polis["confdaemon"], result))
+            result = connection.run("/bin/bash {}".format(polis["confdaemon"]), hide=False) 
+            logging.info('Ran {}:\n {}'.format(polis["confdaemon"]), result)
+
+            """
+            extract privkey from result here, 
+            save it in msaternode["masternode_private_key"]
+            """
+            #Setup script which watches daemon and restarts it on crash
+            connection.put(polis["watcher_cron"], hide=False)
+            logging.info('Uploaded {}:\n {}'.format(polis["watcher_cron"], result))
+            result = connection.run("/bin/bash {}".format(polis["watcher_cron"]), hide=False) 
+            logging.info('Uploaded {}:\n {}'.format(polis["watcher_cron"], result))
+
+
+            #setup sentinel
+            connection.put(polis["sentinel_setup"], hide=False)
+            logging.info('Uploaded {}:\n {}'.format(polis["sentinel_setup"], result))
+            result = connection.run("/bin/bash {}".format(polis["sentinel_setup"]), hide=False) 
+            logging.info('Uploaded {}:\n {}'.format(polis["sentinel_setup"], result))
+
+            
+
+            config["masternodes"].append(masternode)
+            with open('config.json', 'w') as outfile:
+                json.dump(config, outfile)
+
+            connection.close() 
+            #save masternode to config.json.
+            return result
+        except UnexpectedExit as e:
+            #possibly try to start polisd
+            logging.warning('{} exited unexpectedly'.format('polis-cli'), exc_info=e)
+            return "UnexpectedExit"
+        except Exception as e :
+            logging.error('Could not getinfo: {}'.format('polis-cli'), exc_info=e)
+            return "any_cli failed" 
+
+    else: 
+        template="new_mn.html"
+        return render_without_request(template)
 
 '''
 Sub routes pertaining to polis-cli actions
@@ -314,5 +396,5 @@ with app.subroute("/mns") as mns:
         return result
 
 if __name__ == '__main__':
-    app.run(host=config["listen"]["host"], port=config["listen"]["port"])
+    app.run(host=config["Listen"]["host"], port=config["Listen"]["port"])
  
