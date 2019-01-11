@@ -23,14 +23,22 @@
         }
     ],
     "Polis" : {
-        "default_wallet_dir" : "~/.poliscore/",
+        "default_wallet_dir" : "/root/wallets/polis/.wallet/",
         "default_wallet_conf_file" : "polis.conf",
-        "default_cli" : "polis-cli",
-        "default_daemon" : "polisd"
+        "default_cli" : "/root/wallets/polis/polis-cli",
+        "default_daemon" : "/root/wallets/polis/polisd",
+	"default_dir": "/root/wallets/polis",
+        "version_to_upload": "polis.tgz",
+	"polis_hsah": "7eb6ed51c9d4b36781097972cd0306a9",
+	"preconf": "preconf.sh",
+	"confdaemon": "setup_privkey_conf.sh",
+	"watcher_cron": "watcher_cron.sh",
+	"sentinel_setup": "sentinel_setup.sh"
     },
-    "SourceFolder": "/home/me/Documents/",
-    "VersionToUpload": "polis.zip",
-    "listen": {
+    "WalletsFolder":"/root/wallets",
+    "SourceFolder": "/root/",
+    "Listen": {
+	    "host":"localhost",
 	    "port":9000
     }
 }
