@@ -6,21 +6,55 @@
 
 </head>
 <body>
+<h1>jQuery Masternode update status</h1>
+
+
+<button class-'updateAll'>Update all</button>
+    <ul id="masternodes">
+    {% for item in masternodes %}
+    <li>{{ item.cnx }} | <button class='install' id='install_{{ item.idx }}' href='#'>install watcher {{item.idx}}</button>  |  <button class='update' id='update_{{ item.idx }}' href='#'>update {{item.idx}}</button> <div class='status' id='status_{{item.idx}}'/>   </li>
+    {% endfor %}
+    </ul>
+
+
+
+    {#    <ul id="masternodes">
+    {% for item in masternodes %}
+	    <li>{{ item }}</li>
+    {% endfor %}
+    </ul>
+    #}}
+
 
 <script type=text/javascript>
+
+  function installScript(id)
+   {
+
+
+      mnidx = id.attr("id").split("_").pop()
+      console.log("Installing watcher for: "+ id); 
+      $.getJSON('/scripts/watcher', { mnidx: mnidx}, function(data) {
+          console.log("Installing watcher for: "+ mnidx ); 
+          $("#status_"+mnidx).text(data);
+      });
+    }
+
 
   function updateStatus(mn_status)
     {
       mn_status.text('Updating...')
+        
+      mnidx = mn_status.attr("id").split("_").pop()
 
-      $.getJSON('/cli/masternode/status', { mnidx: mn_status.attr("id")  }, function(data) {
-          console.log("Loading details for mn; "+ mn_status.attr("id"));
+      $.getJSON('/mns/cli/masternode/status', { mnidx: mnidx}, function(data) {
+          console.log("Loading details for mn; "+ mnidx);
           console.log(data)
           
           if(data.status.startsWith("restart"))
           {
               mn_status.text("Down, Restart mn daemon:")
-              mn_status.append("<a href='/daemon/launch?mn="+mn_status.attr("id")+"'>start polisd</a>");
+              mn_status.append("<a href='/daemon/launch?mn="+mnidx+"'>start polisd</a>");
           }
           else{
               mn_status.text(data.status)
@@ -32,15 +66,19 @@
 
     }
     $('.update').bind('click', function() {
-        var id = '#'+$(this).attr('id')
-
-        console.log("Updating status for : "+ id);
+        var id = '#status_'+$(this).attr('id') 
+        console.log("Updating status for : div"+ id); 
         updateStatus($(id)) 
     });
     $('.upodateAll').bind('click', function() {
-        console.log("UIpdate all" );
+        console.log("Update all" );
         updateAll();
 
+    });
+    $('.install').bind('click', function(){ 
+        var id = "#status_"+$(this).attr('id').split("_")[1] 
+        console.log("Clicked :"+id)
+        installScript($(id))
     });
 
     function updateAll() 
@@ -57,24 +95,6 @@
 
     });
 </script>
-<h1>jQuery Masternode update status</h1>
-
-
-<button class-'updateAll'>Update all</button>
-    <ul id="masternodes">
-    {% for item in masternodes %}
-    <li>{{ item.cnx }} | <button class='update' id='{{ item.idx }}' href='#'>update {{item.idx}}</button> <div class='status' id='{{item.idx}}'/>   </li>
-    {% endfor %}
-    </ul>
-
-
-
-    {#    <ul id="masternodes">
-    {% for item in masternodes %}
-	    <li>{{ item }}</li>
-    {% endfor %}
-    </ul>
-    #}}
 
 </body>
 </html>
