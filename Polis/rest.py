@@ -242,8 +242,8 @@ with app.subroute("/daemon") as daemon:
     @daemon.route('/launch', methods=['GET'])
     def daemon_masternode_start(request):
         
-        mn_idx = request.args.get('mn')
-        [result] = do_action_daemon(config['masternodes'][int(mn_idx)])
+        mn_idx = int(request.args.get(b'mn')[0])
+        result = do_action_daemon(config['masternodes'][mn_idx])
         logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
         return result 
 
@@ -251,6 +251,40 @@ with app.subroute("/daemon") as daemon:
 REST endpoint to clean up wallet dir (rm blockchain files) start daemon with -resync
 TODO:
 '''
+    
+
+'''
+Subroute of script installs (to crontab mostly)
+'''
+with app.subroute("/scripts") as scripts:
+    @scripts.route('/watcher', methods=['GET'])
+    async def watcher_install(request):
+        try:
+            mnidx = int(request.args.get(b'mnidx',[0])[0])
+
+            mn = config["masternodes"][mnidx]
+            polis = config["Polis"]
+            
+            kwargs = {} 
+            kwargs['password'] = mn['password']
+
+            print ("Connecting to {}".format(mn["connection_string"]))
+            connection = Connection(mn["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
+
+            logging.info('>>>uploading {} to{} '.format(polis["watcher_cron"], mn["connection_string"]))
+            connection.put(polis["watcher_cron"]) 
+            logging.info('>>>Uploaded {} to {}'.format(polis["watcher_cron"], mn["connection_string"]))
+            result = connection.run("/bin/bash {}".format(polis["watcher_cron"]), hide=False) 
+            logging.info('>>>Executed {}:\n {}'.format(polis["watcher_cron"], result))
+            connection.close()
+
+            if result.stdout == '' and result.stderr == '': 
+                return "Watcher installed succesfully"
+            return "Failed stdout: {}\nstderr: {} ".format(result.stdout, result.stderr)
+        except Exception as e:
+            logging.error("Failed to install watcher: {} ".format(mn["connection_string"]), exc_info = e)
+            return "Exception"
+
 
 
 '''
@@ -263,28 +297,28 @@ TODO:
 @app.route('/create',methods=['POST', 'GET'])
 def create(request):
     if(request.method == "POST"):
+
+        password = request.args.get('password') 
+
         logging.info('ip = {}, password = {}, port = {}, name = {}'.format(request.args.get('ip'),
-            request.args.get('password'),request.args.get('port'),request.args.get('name')))
-        
+            password,request.args.get('port'),request.args.get('name')))
+
         masternode = { 
             "connection_sting": "{}@{}:{}".format(request.args.get('user'), request.args.get('host'),
                 request.args.get('port)')),
-            "password":request.args.get('password'),
+            "password":password,
             "name":request.args.get("name") }
         
-        #upload scripts to host
+        kwargs['password'] = password
 
         try:
+        #upload scripts to host
             polis = config["Polis"]
         
-
             connection = Connection(masternode["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
             
             # does all the apt get
-            result = connection.put(polis["preconf"], hide=False)
-            logging.info('Uploaded {}:\n {} '.format(polis["preconf"],result))
-            result = connection.run("/bin/bash {}".format(polis["preconf"]),hide=False)
-            logging.info('Ran {}:\n {}'.format(polis["preconf"],result))
+            result = connection.put(polis["preconf"])
 
 
             #get polisd from another mn if not available locally (polis.zip)
@@ -294,11 +328,11 @@ def create(request):
                 #wrong version, need to get new one from top MN
             """
 
-            connection.put(polis["preconf"]["version_to_upload"], hide=False)
+            connection.put(polis["preconf"]["version_to_upload"])
             connection.run("mkdir {} && mkdir {} && tar zxvf {} {}".format(config["WalletsFolder"], polis["default_dir"],polis["version_to_upload"],polis["default_dir"]), hide=False) 
 
             #second part configuration script, generates privkey and gets polisd running properly
-            result = connection.put(polis["confdaemon"], hide=False)
+            result = connection.put(polis["confdaemon"] )
             logging.info('Uploaded {}:\n {}'.format(polis["confdaemon"], result))
             result = connection.run("/bin/bash {}".format(polis["confdaemon"]), hide=False) 
             logging.info('Ran {}:\n {}'.format(polis["confdaemon"]), result)
@@ -308,14 +342,14 @@ def create(request):
             save it in msaternode["masternode_private_key"]
             """
             #Setup script which watches daemon and restarts it on crash
-            connection.put(polis["watcher_cron"], hide=False)
+            connection.put(polis["watcher_cron"])
             logging.info('Uploaded {}:\n {}'.format(polis["watcher_cron"], result))
             result = connection.run("/bin/bash {}".format(polis["watcher_cron"]), hide=False) 
             logging.info('Uploaded {}:\n {}'.format(polis["watcher_cron"], result))
 
 
             #setup sentinel
-            connection.put(polis["sentinel_setup"], hide=False)
+            connection.put(polis["sentinel_setup"])
             logging.info('Uploaded {}:\n {}'.format(polis["sentinel_setup"], result))
             result = connection.run("/bin/bash {}".format(polis["sentinel_setup"]), hide=False) 
             logging.info('Uploaded {}:\n {}'.format(polis["sentinel_setup"], result))
