@@ -10,15 +10,7 @@
             "destination_folder": "/root/Polis",
             "connection_certificate": "/root/.ssh/my_certificate.pem",
             "comment": "Hello !",
-            "wallet_directories":
-                [
-                    {
-                        "wallet_directory": "/root/.poliscore1/"
-                    },
-                                    {
-                        "wallet_directory": "/root/.poliscore2/"
-                    }
-                ]
+	    "wallet_directory": "/root/.poliscore1/"
 
         }
     ],
@@ -33,7 +25,8 @@
 	"preconf": "preconf.sh",
 	"confdaemon": "setup_privkey_conf.sh",
 	"watcher_cron": "watcher_cron.sh",
-	"sentinel_setup": "sentinel_setup.sh"
+	"sentinel_setup": "sentinel_setup.sh",
+	"cli":"polis-cli"
     },
     "WalletsFolder":"/root/wallets",
     "SourceFolder": "/root/",
