@@ -2,10 +2,16 @@
 
 #Sentinel setup
 #weird bug didnt allow virtualenv venv to work without doing following command:
+# arguments:  1: https://github.com/polispay/sentinel.git  2: COINDIR 3: COIN
+#
+SENTINEL_GIT = $1
+COINDIR = $2
+COIN = $3
+
 export LC_ALL=C
 ############
 cd $COINDIR
-sudo git clone https://github.com/polispay/sentinel.git
+sudo git clone $SENTINEL_GIT
 cd sentinel
 sudo apt-get install -y virtualenv
 virtualenv venv
@@ -16,4 +22,3 @@ echo "* * * * * cd $COINDIR/sentinel && ./venv/bin/python bin/sentinel.py 2>&1 >
 crontab tempcron
 rm tempcron
 echo "source ~/.bash_aliases"
-echo "Job completed successfully, Masternode private key: mn ${MY_IP}:24126 $masternodekey"
