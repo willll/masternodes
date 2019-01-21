@@ -60,28 +60,10 @@ async def shell_actions(action, connection, dir, wallet_dir="", use_wallet_dir=F
         logging.error('Could not getinfo  : {}'.format('polisd'), exc_info=e)
         return "failed"
 
-
-'''
-'''
-async def any_daemon(action, connection, dir, wallet_dir="", use_wallet_dir=False):
-    try:
-        conx_str = '{}/polisd'.format(dir)
-        if wallet_dir != "" and use_wallet_dir :
-            conx_str += " --datadir=" + wallet_dir
-        conx_str += " "+action
-
-        result = await connection.run(conx_str, hide=False)
-        logging.info("Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
-
-        return result
-    except Exception as e :
-        logging.error('Could not getinfo  : {}'.format('polisd'), exc_info=e)
-        return "failed"
-
 '''
 This can be used to restart daemon if getinfo isnt responding, and mn is down likely because it crashed
 '''
-async def do_action_daemon(masternode, actions = ['--daemon']):
+async def do_action_daemon(masternode, action = ['--daemon'], coin = 'Polis'):
     try:
         kwargs = {}
         if "connection_certificate" in masternode :
@@ -91,22 +73,34 @@ async def do_action_daemon(masternode, actions = ['--daemon']):
             if "password" in masternode:
                 kwargs['password'] = masternode["password"]
 
-        connection = Connection(masternode["connection_string"],  connect_timeout=30, connect_kwargs=kwargs)
+        connection = Connection(masternode["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
+        logging.info('>>> Got connection to {} using {} '.format(masternode["connection_string"], kwargs))
 
-        target_directory = masternode["destination_folder"]
+        if "destination_folder" in masternode: 
+            conx_str = '{}/{}'.format( masternode["destination_folder"],
+                                      config[coin]["daemon"])
+        elif "default_dir" in config[coin]:
+            conx_str = '{}/{}'.format(config[coin]["default_dir"],
+                                      config[coin]["daemon"])
+        else:
+            conx_str = config[coin]["daemon"]
 
-        use_wallet_dir = True
+        if "wallet_directory" in masternode :
+            wallet_dir = masternode["wallet_directory"]
+            conx_str += " --datadir=" + wallet_dir
+        elif config[coin]["default_wallet_dir"]:
+            conx_str += " --datadir=" + config[coin]["default_wallet_dir"]
 
-        results = []
-        for action in actions:
-            result = await any_daemon(action, connection, target_directory, masternode["wallet_directories"][0]["wallet_directory"], use_wallet_dir )
-            results.append(result)
-            logging.info('{} Has been successfully applied to {}'.format(action, masternode["connection_string"]))
+        conx_str += " "+action
+        result = await connection.run(conx_str, hide=False)
+        logging.info('{} executed on {}'.format(action, masternode["connection_string"]))
 
         connection.close()
-        return results
+        logging.info('Connection closed to {} '.format(masternode["connection_string"]))
+        return result.stdout
+
     except Exception as e:
-        logging.error('Could not do_action_daemon {}'.format(masternode["connection_string"]), exc_info=e)
+        logging.error('Problem in do_action_daemon {}'.format(masternode["connection_string"]), exc_info=e)
         return 'failed'
 '''
 asynchronous do cli action
@@ -142,13 +136,13 @@ async def async_dacli(masternode, action, coin = "Polis"):
         result = connection.run(conx_str, hide=False)
         logging.info(">>> Succesfully executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
 
-        connection.close() 
+        connection.close()
         logging.info('Connection closed'.format(masternode["connection_string"]))
         return result.stdout
     except UnexpectedExit as e:
         #possibly try to start  the daemon again
         logging.warning('{} exited unexpectedly'.format(config[coin]["cli"]), exc_info=e)
-        return '{"status":"restart"}' 
+        return '{"status":"restart"}'
     except Exception as e:
         logging.error('Could not do_action {} : {}'.format(masternode["connection_string"], e), exc_info=e)
         return 'exception'
@@ -222,14 +216,11 @@ with app.subroute("/scripts") as scripts:
             kwargs = {}
             kwargs['password'] = mn['password']
 
-            print ("Connecting to {}".format(mn["connection_string"]))
-            connection = Connection(mn["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
-
-            logging.info('>>>uploading {} to{} '.format(polis["watcher_cron"], mn["connection_string"]))
             connection.put(polis["watcher_cron"])
-            logging.info('>>>Uploaded {} to {}'.format(polis["watcher_cron"], mn["connection_string"]))
-            result = connection.run("/bin/bash {}".format(polis["watcher_cron"]), hide=False)
-            logging.info('>>>Executed {}:\n {}'.format(polis["watcher_cron"], result))
+            result = connection.run("/bin/bash {} {} {} {}".format(
+                polis["watcher_cron"], polis["default_dir"], polis["daemon"],
+                polis["default_wallet_dir"]), hide=False)
+
             connection.close()
 
             if result.stdout == '' and result.stderr == '':
@@ -238,6 +229,39 @@ with app.subroute("/scripts") as scripts:
         except Exception as e:
             logging.error("Failed to install watcher: {} ".format(mn["connection_string"]), exc_info = e)
             return "Exception"
+
+
+'''
+Manage the config file from web
+'''
+with app.subroute("/config") as conf:
+    @conf.route('/read', methods= ['GET'])
+    def config_read(request):
+        return json.dumps(config)
+
+
+    '''
+    receive json to modify the conf
+    '''
+    @conf.route('/write', method= ['POST'])
+    def config_write(request): 
+        return succeed()
+
+    '''
+    add configuration for one masternode
+    '''
+    @conf.route('/mn/add', method=['post'])
+    def config_add_mn(request):
+        return succeed()
+
+    '''
+    return HTML form to manage config,
+    '''
+    @conf.route('/view', method=['GET'])
+    def config_view(request):
+        return render_without_request()
+
+
 
 
 
@@ -266,12 +290,12 @@ def create(request):
 
         try:
         #upload scripts to host
-            polis = config["Polis"]
+            coin_name = "Polis"
+
+            polis = config[coin_name]
             connection = Connection(masternode["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
             # does all the apt get
             result = connection.put(polis["preconf"])
-
-
             #get polisd from another mn if not available locally (polis.zip)
             """
             polishash = hashlib.md5(open("polis.tgz","rb").read()).hexdigest()
@@ -280,12 +304,21 @@ def create(request):
             """
 
             connection.put(polis["preconf"]["version_to_upload"])
-            connection.run("mkdir {} && mkdir {} && tar zxvf {} {}".format(config["WalletsFolder"], polis["default_dir"],polis["version_to_upload"],polis["default_dir"]), hide=False)
+            connection.run("mkdir {} && mkdir {} && tar zxvf {} {}".format( config["WalletsFolder"],
+                                                                           polis["default_dir"],
+                                                                           polis["version_to_upload"],
+                                                                           polis["default_dir"]), hide=False)
 
             #second part configuration script, generates privkey and gets polisd running properly
+            # TODO: this can easily be all generated within the script and
+            # simply pasted into the remote .wallet file at location. Might
+            # require a polisd running locally though, to generate masternode
+            # privkey
             result = connection.put(polis["confdaemon"] )
             logging.info('Uploaded {}:\n {}'.format(polis["confdaemon"], result))
-            result = connection.run("/bin/bash {}".format(polis["confdaemon"]), hide=False)
+            result = connection.run("/bin/bash {} {} {} {} {}".format(
+                polis["confdaemon"], coin_name, polis["addnode"],
+                polis["default_dir"], masternode["connection_string"].split("@")[1].split(":")[0] ), hide=False)
             logging.info('Ran {}:\n {}'.format(polis["confdaemon"]), result)
 
             """
@@ -295,16 +328,21 @@ def create(request):
             #Setup script which watches daemon and restarts it on crash
             connection.put(polis["watcher_cron"])
             logging.info('Uploaded {}:\n {}'.format(polis["watcher_cron"], result))
-            result = connection.run("/bin/bash {}".format(polis["watcher_cron"]), hide=False)
+            result = connection.run("/bin/bash {} {} {} {}".format(
+                polis["watcher_cron"], polis["default_dir"], polis["daemon"],
+                polis["default_wallet_dir"]), hide=False)
             logging.info('Uploaded {}:\n {}'.format(polis["watcher_cron"], result))
 
 
             #setup sentinel
             connection.put(polis["sentinel_setup"])
             logging.info('Uploaded {}:\n {}'.format(polis["sentinel_setup"], result))
-            result = connection.run("/bin/bash {}".format(polis["sentinel_setup"]), hide=False)
+            result = connection.run("/bin/bash {} {} {}
+                                    {}".format(polis["sentinel_setup"],
+                                               polis["sentnel_git"],
+                                               polis["default_dir"],
+                                               coin_name), hide=False)
             logging.info('Uploaded {}:\n {}'.format(polis["sentinel_setup"], result))
-
 
             config["masternodes"].append(masternode)
             with open('config.json', 'w') as outfile:
