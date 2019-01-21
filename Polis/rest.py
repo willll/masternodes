@@ -243,21 +243,21 @@ with app.subroute("/config") as conf:
     '''
     receive json to modify the conf
     '''
-    @conf.route('/write', method= ['POST'])
+    @conf.route('/write', methods= ['POST'])
     def config_write(request): 
         return succeed()
 
     '''
     add configuration for one masternode
     '''
-    @conf.route('/mn/add', method=['post'])
+    @conf.route('/mn/add', methods=['post'])
     def config_add_mn(request):
         return succeed()
 
     '''
     return HTML form to manage config,
     '''
-    @conf.route('/view', method=['GET'])
+    @conf.route('/view', methods=['GET'])
     def config_view(request):
         return render_without_request()
 
@@ -337,8 +337,7 @@ def create(request):
             #setup sentinel
             connection.put(polis["sentinel_setup"])
             logging.info('Uploaded {}:\n {}'.format(polis["sentinel_setup"], result))
-            result = connection.run("/bin/bash {} {} {}
-                                    {}".format(polis["sentinel_setup"],
+            result = connection.run("/bin/bash {} {} {} {}".format(polis["sentinel_setup"],
                                                polis["sentnel_git"],
                                                polis["default_dir"],
                                                coin_name), hide=False)
