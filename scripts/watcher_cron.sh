@@ -9,7 +9,7 @@ WALLET_DIR=$4
 crontab -l > tempcron
 cat <<EOF > /root/${COIN}chk.sh
 #!/bin/bash
-if (( $(ps -ef | grep -v grep | grep $DAEMON | wc -l) > 0 ))
+if (( \$(ps -ef | grep -v grep | grep $DAEMON | wc -l) > 0 ))
 then
 echo "$COIN is running!!!"
 else
