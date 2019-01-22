@@ -3,35 +3,38 @@
 <head>
     <title>Masternode List</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-
+    <style>
+        #output{
+            width: 500px;
+            height:400px;
+        }
+    </style>
 </head>
 <body>
+
 <h1>jQuery Masternode update status</h1>
 
 
 <button class-'updateAll'>Update all</button>
     <ul id="masternodes">
     {% for item in masternodes %}
-    <li>{{ item.cnx }} | <button class='install' id='install_{{ item.idx }}' href='#'>install watcher {{item.idx}}</button>  |  <button class='update' id='update_{{ item.idx }}' href='#'>update {{item.idx}}</button> <div class='status' id='status_{{item.idx}}'/>   </li>
+    <li>{{ item.cnx }} |
+        <button class='install' id='install_{{ item.idx }}' href='#'>install watcher {{item.idx}}</button>  |
+        <button class='update' id='update_{{ item.idx }}' href='#'>update {{item.idx}}</button>
+        <button class='mnsync_status' id='mnsyncstatus_{{ item.idx }}' href='#'>mnsync status {{item.idx}}</button>
+        <button class='getinfo' id='getinfo_{{ item.idx }}' href='#'>getinfo {{item.idx}}</button>
+        <button class='getcron' id='getcron_{{ item.idx }}' href='#'>getcron {{item.idx}}</button>
+        <button class='getconfig' id='getconfig_{{ item.idx }}' href='#'>getconfig {{item.idx}}</button>
+        <div class='status' id='status_{{item.idx}}'/>
+    </li>
     {% endfor %}
     </ul>
-
-
-
-    {#    <ul id="masternodes">
-    {% for item in masternodes %}
-	    <li>{{ item }}</li>
-    {% endfor %}
-    </ul>
-    #}}
-
+    <textarea id='output'>
+    </textarea>
 
 <script type=text/javascript>
-
-  function installScript(id)
-   {
-
-
+    function installScript(id)
+    {
       mnidx = id.attr("id").split("_").pop()
       console.log("Installing watcher for: "+ id); 
       $.getJSON('/scripts/watcher', { mnidx: mnidx}, function(data) {
@@ -40,8 +43,7 @@
       });
     }
 
-
-  function updateStatus(mn_status)
+    function updateStatus(mn_status)
     {
       mn_status.text('Updating...')
         
@@ -80,8 +82,36 @@
         console.log("Clicked :"+id)
         installScript($(id))
     });
-
-    function updateAll() 
+    $('.mnsync_status').bind('click', function(){
+        data = {"status":"Empty"}
+        var id = $(this).attr('id').split("_")[1]
+        console.log("mnsync status requested: "+id)
+        $.getJSON('/mns/cli/mnsync/status', { mnidx: id }, function(data) {
+            console.log("Mnsync result: "+data);
+            $("#output").append(data.AssetName);
+         });
+    });
+    $('.getconfig').bind('click', function(){
+        console.log("getconfig requested")
+        $.getJSON('/config/read', {}, function(data) {
+            $("#output").append(data);
+        });
+    });
+    $('.getcron').bind('click', function(){
+        var id = $(this).attr('id').split("_")[1]
+        console.log("This should fail for now")
+        $.getJSON('/mns/cron/read', { mnidx: id }, function(data) {
+            $("#output").append(data);
+        });
+    });
+    $('.getinfo').bind('click', function(){
+        var id = $(this).attr('id').split("_")[1]
+        console.log("getinfo requested: "+id)
+        $.getJSON('/mns/cli/action', { mnidx: id, actidx: 'gi' }, function(data) {
+            $("#output").append(data);
+        });
+    });
+    function updateAll()
     { 
         $(".status").each(function(){ 
             var mn_status = $(this); 

@@ -23,7 +23,23 @@ logging.basicConfig(
 '''
 @app.route('/')
 def hello_world(request):
-    return 'Hello, World! <a href="/mns/list">Masternodes</a> <a href="/daemon/startpolis">Start Polis</a> <a href=''>Masternodes</a> '
+    return 'Hello, World! <a href="/mns/list">Masternodes</a>' \
+           '<a href="/daemon/startpolis">Start Polis</a> <a href=''>Masternodes</a> '
+
+
+class VPS:
+    def __init__(self, masternode):
+        self.masternode = masternode
+        kwargs = {}
+        if "connection_certificate" in masternode :
+            kwargs['key_filename'] = masternode["connection_certificate"]
+        else:
+            # Must be mutually excluded
+            if "password" in masternode:
+                kwargs['password'] = masternode["password"]
+        self.connection = Connection(masternode["connection_string",  connect_timeout=31, connect_kwargs=kwargs)
+
+
 '''
 Temporary fix for templating
 TODO:
@@ -43,22 +59,34 @@ def render_without_request(template_name, **template_vars):
     return template.render(**template_vars)
 '''
 '''
-async def shell_actions(action, connection, dir, wallet_dir="", use_wallet_dir=False):
+async def shell_actions(action, masternode):
     try:
         # list of actions that are accepted
         actions = {'clean_wallet':'',
                 'kill_daemon':'',
-                'view_crontab':'',
+                'view_crontab':'crontab -l',
                 'view_script':'',
                 'start_polis':''}
 
-        result = await connection.run(conx_str, hide=False)
+        kwargs = {}
+        if "connection_certificate" in masternode :
+            kwargs['key_filename'] = masternode["connection_certificate"]
+        else:
+            # Must be mutually excluded
+            if "password" in masternode:
+                kwargs['password'] = masternode["password"]
+
+        connection = Connection(masternode["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
+        logging.info('>>> Got connection to {} using {} '.format(masternode["connection_string"], kwargs))
+
+        result = await connection.run(actions[action], hide=False)
         logging.info(">>> Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
 
+        connection.close()
         return result
     except Exception as e :
         logging.error('Could not getinfo  : {}'.format('polisd'), exc_info=e)
-        return "failed"
+        return "shell_actions failed"
 
 '''
 This can be used to restart daemon if getinfo isnt responding, and mn is down likely because it crashed
@@ -111,7 +139,7 @@ async def async_dacli(masternode, action, coin = "Polis"):
         kwargs = {}
         if "connection_certificate" in masternode :
             kwargs['key_filename'] = masternode["connection_certificate"]
-        else :
+        else:
             # Must be mutually excluded
             if "password" in masternode:
                 kwargs['password'] = masternode["password"]
@@ -134,7 +162,7 @@ async def async_dacli(masternode, action, coin = "Polis"):
 
         conx_str += " "+action
         result = connection.run(conx_str, hide=False)
-        logging.info(">>> Succesfully executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
+        logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
 
         connection.close()
         logging.info('Connection closed'.format(masternode["connection_string"]))
@@ -171,7 +199,7 @@ with app.subroute("/daemon") as daemon:
                 for r in do_action_daemon(address, actions):
                     result += "<p>"+str(r) +"</p>\n"
 
-            return "Result of running polisd {}: {} <br> <a href=/mns/cli/masternodes/status></a>".format(actions, result)
+            return "Result of polisd {}: {} <br><a href=/mns/cli/masternodes/status></a>".format(actions, result)
         else:
             #diisplay list of all MNs with "start" button
             mnlist = "<form method='POST'>\n<select name=mns multiple>\n"
@@ -206,15 +234,23 @@ TODO:
 Subroute of script installs (to crontab mostly)
 '''
 with app.subroute("/scripts") as scripts:
+    '''
+    Install watcher using this, or get log, or get version (hash).
+    '''
     @scripts.route('/watcher', methods=['GET'])
     async def watcher_install(request):
         try:
             mnidx = int(request.args.get(b'mnidx',[0])[0])
-
-            mn = config["masternodes"][mnidx]
-            polis = config["Polis"]
+            masternode = config["masternodes"][mnidx]
             kwargs = {}
-            kwargs['password'] = mn['password']
+            if "connection_certificate" in masternode:
+                kwargs['key_filename'] = masternode["connection_certificate"]
+            else:
+                # Must be mutually excluded
+                if "password" in masternode:
+                    kwargs['password'] = masternode['password']
+
+            polis = config["Polis"]
 
             connection.put(polis["watcher_cron"])
             result = connection.run("/bin/bash {} {} {} {}".format(
@@ -235,23 +271,25 @@ with app.subroute("/scripts") as scripts:
 Manage the config file from web
 '''
 with app.subroute("/config") as conf:
+    ''' 
+    Return json of config.
+    '''
     @conf.route('/read', methods= ['GET'])
-    def config_read(request):
+    async def config_read(request):
         return json.dumps(config)
-
 
     '''
     receive json to modify the conf
     '''
     @conf.route('/write', methods= ['POST'])
-    def config_write(request): 
+    async def config_write(request):
         return succeed()
 
     '''
     add configuration for one masternode
     '''
     @conf.route('/mn/add', methods=['post'])
-    def config_add_mn(request):
+    async def config_add_mn(request):
         return succeed()
 
     '''
@@ -269,8 +307,11 @@ with app.subroute("/config") as conf:
 Create a new MN:
 Deploy a new MN based on form information, also save it to config
 TODO:
-    - Form which takes: IP of new VPS, password of vps, tx output optional (eventually generate automatically here through request)
-    - Runs script to update VPS, copy polis binary from local, generate priv key, install sentinel and crontab job, install sscript to watch daemon every minute and relaunch it
+    - Form which takes: IP of new VPS, password of vps, tx output optional
+    (eventually generate automatically here through request)
+    - Runs script to update VPS, copy polis binary from local,
+    generate priv key, install sentinel and crontab job, install
+    sscript to watch daemon every minute and relaunch it
 '''
 @app.route('/create',methods=['POST', 'GET'])
 def create(request):
@@ -366,30 +407,48 @@ def create(request):
 Sub routes pertaining to polis-cli actions
 '''
 with app.subroute("/mns") as mns:
+
+
+
     '''
     returns rendered list of masternodes (mnlist-jquery.html), with a list of masternodes to preload into DOM
     TODO: change config format to  IP:{...information about masternode..}
     '''
     @mns.route('/list', methods=['GET'])
     def masternodes(request):
-        file = open("config.json", "r")
-        config = json.load(file)
-        error=None
         template="mnlist-jquery.html"
 
         preload = []
         idx=0
         for mn in config["masternodes"]:
-            preload.append({"cnx":mn["connection_string"],"idx":idx})
-            idx+=1
+            preload.append({"cnx": mn["connection_string"], "idx": idx})
+            idx += 1
 
         logging.info("Returning preloaded template for frontend {}".format(preload))
         return render_without_request(template, masternodes=preload)
+
+    '''
+    Read crontab for given mn and return
+    '''
+    @mns.route('/cron/read')
+    def cron_read(request):
+        mnidx = int(request.args.get(b'mnidx', [0])[0])
+        return succeed()
+
+    '''
+    Nonblocking masternode status request using await
+    '''
+    @mns.route('/cli/mnsync/status', methods=['GET'])
+    async def cli_mnsync_status(request):
+        mnidx = int(request.args.get(b'mnidx', [0])[0])
+        logging.info("mnsync status called with mnidx: {} and mnss".format(mnidx))
+        request.redirect("/mns/cli/action?mnidx={}&actidx={}".format(mnidx, 'mnss'))
+        return None
     '''
     Nonblocking masternode status request using await
     '''
     @mns.route('/cli/masternode/status', methods=['GET'])
-    async def cli_mn_status(request):
+    async def cli_masternode_status(request):
         mnidx = int(request.args.get(b'mnidx', [0])[0])
         request.redirect("/mns/cli/action?mnidx={}&actidx={}".format(mnidx, 'mnstat'))
         return None
@@ -401,15 +460,16 @@ with app.subroute("/mns") as mns:
     '''
     @mns.route('/cli/action', methods=['GET'])
     async def cli_mn_action(request):
-        mnidx = int(request.args.get(b'mnidx', [0])[0])
-        actidx = request.args.get('actidx', ['mnstat'])[0]
-        actions = {'mnsyncstat':'mnsync status',
-                   'mnstat':'masternode status',
-                   'gi':'getinfo',
-                   'mnss':'mnsync status' }
+        mnidx =int(request.args.get(b'mnidx', [0])[0])
+        actidx =request.args.get(b'actidx', [b'mnstat'])[0]
 
-        logging.info("{} no blocking masternode status requested for mn {}  ".format(actions[actidx],mnidx))
-        result = await async_dacli(config['masternodes'][mnidx],actions[actidx])
+        logging.info("ARGUMENTS: 1 / {}  /2/ {} /3/ {} ".format(request.args, request.args.get(b'actidx'), actidx))
+        actions = {b'mnstat': 'masternode status',
+                   b'gi': 'getinfo',
+                   b'mnss': 'mnsync status'}
+
+        logging.info("{} no blocking requested for mn {}  ".format(actions[actidx], mnidx))
+        result = await async_dacli(config['masternodes'][mnidx], actions[actidx])
 
         return result
 
