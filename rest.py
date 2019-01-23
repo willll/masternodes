@@ -134,7 +134,7 @@ def render_without_request(template_name, **template_vars):
     return template.render(**template_vars)
 '''
 '''
-async def shell_actions(action, masternode):
+def shell_actions(action, masternode):
     try:
         # list of actions that are accepted
         actions = {'clean_wallet':'',
@@ -154,7 +154,7 @@ async def shell_actions(action, masternode):
         connection = Connection(masternode["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
         logging.info('>>> Got connection to {} using {} '.format(masternode["connection_string"], kwargs))
 
-        result = await connection.run(actions[action], hide=False)
+        result =  connection.run(actions[action], hide=False)
         logging.info(">>> Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
 
         connection.close()
@@ -166,7 +166,7 @@ async def shell_actions(action, masternode):
 '''
 This can be used to restart daemon if getinfo isnt responding, and mn is down likely because it crashed
 '''
-async def do_action_daemon(masternode, action = ['--daemon'], coin = 'Polis'):
+def do_action_daemon(masternode, action = ['--daemon'], coin = 'Polis'):
     try:
         kwargs = {}
         if "connection_certificate" in masternode :
@@ -195,7 +195,7 @@ async def do_action_daemon(masternode, action = ['--daemon'], coin = 'Polis'):
             conx_str += " --datadir=" + config[coin]["default_wallet_dir"]
 
         conx_str += " "+action
-        result = await connection.run(conx_str, hide=False)
+        result =  connection.run(conx_str, hide=False)
         logging.info('{} executed on {}'.format(action, masternode["connection_string"]))
 
         connection.close()
@@ -208,7 +208,7 @@ async def do_action_daemon(masternode, action = ['--daemon'], coin = 'Polis'):
 '''
 asynchronous do cli action
 '''
-async def async_dacli(masternode, action, coin = "Polis"):
+def async_dacli(masternode, action, coin = "Polis"):
     # noinspection PyBroadException
     try:
 
@@ -314,7 +314,7 @@ with app.subroute("/scripts") as scripts:
     Install watcher using this, or get log, or get version (hash).
     '''
     @scripts.route('/watcher', methods=['GET'])
-    async def watcher_install(request):
+    def watcher_install(request):
         try:
             mnidx = int(request.args.get(b'mnidx',[0])[0])
             masternode = config["masternodes"][mnidx]
@@ -355,21 +355,21 @@ with app.subroute("/config") as conf:
     Return json of config.
     '''
     @conf.route('/read', methods= ['GET'])
-    async def config_read(request):
+    def config_read(request):
         return json.dumps(config)
 
     '''
     receive json to modify the conf
     '''
     @conf.route('/write', methods= ['POST'])
-    async def config_write(request):
+    def config_write(request):
         return succeed()
 
     '''
     add configuration for one masternode
     '''
     @conf.route('/mn/add', methods=['post'])
-    async def config_add_mn(request):
+    def config_add_mn(request):
         return succeed()
 
     '''
@@ -550,7 +550,7 @@ with app.subroute("/mns") as mns:
 
         mn = Masternode(config["masternodes"][mnidx])
         coin = Polis(config["Polis"])
-        result = await mn.async_cli(actions[actidx], coin)
+        result = mn.async_cli(actions[actidx], coin)
 
         return result
 
