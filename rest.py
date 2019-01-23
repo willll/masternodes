@@ -27,17 +27,92 @@ def hello_world(request):
            '<a href="/daemon/startpolis">Start Polis</a> <a href=''>Masternodes</a> '
 
 
-class VPS:
+class Coin:
+    def __init__(self, name):
+        self.name = name
+
+class Polis(Coin):
+    def __init__(self, config):
+        Coin.__init__(self, "polis")
+        self.default_wallet_dir = config["default_wallet_dir"]
+        self.default_dir = config["default_dir"]
+        self.version_to_upload = config["version_to_upload"]
+        self.scripts = config["scripts"]
+        self.preconf = config["preconf"]
+        self.confdaemon = config["confdaemon"]
+        self.cli = config["cli"]
+        self.daemon = config["daemon"]
+
+class Masternode:
     def __init__(self, masternode):
         self.masternode = masternode
         kwargs = {}
         if "connection_certificate" in masternode :
             kwargs['key_filename'] = masternode["connection_certificate"]
         else:
-            # Must be mutually excluded
             if "password" in masternode:
                 kwargs['password'] = masternode["password"]
-        self.connection = Connection(masternode["connection_string",  connect_timeout=31, connect_kwargs=kwargs)
+
+        try:
+            self.connection = Connection(masternode["connection_string"], connect_timeout=31, connect_kwargs=kwargs)
+        except UnexpectedExit as e:
+            #possibly try to start  the daemon again
+            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
+            return '{"status":"restart"}'
+        except Exception as e:
+            logging.error('Could not do_action {} : {}'.format(masternode["connection_string"], e), exc_info=e)
+            return 'exception'
+
+    def __del__(self):
+        try:
+            self.connection.close()
+        except Exception as e:
+            logging.error('Could not close connection')
+            return 'failed to close connection'
+
+    def actions(self):
+        return
+    '''
+    check file's hash, useful to check if a script is correct
+    '''
+    def check_file(self):
+        return
+    '''
+    '''
+    def check_watcher_log(self):
+        return
+    '''
+    '''
+    def install_watcher(self, coin):
+        self.connection.put(coin.scripts["local_path"]+coin.scripts["watcher_cron"])
+        result = self.connection.run("/bin/bash {} {} {} {}".format(
+            coin.scripts["watcher_cron"], coin.name, coin.default_dir, coin.daemon,
+            coin.default_wallet_dir), hide=False)
+        return result
+    def install_sentinel(self):
+        return
+
+    '''
+    eventually offer async_cli functions
+    '''
+    def async_cli(self, action, coin):
+        try:
+            cmd = "{}/{} --datadir={} {}".format(coin.default_dir,coin.cli, coin.default_wallet_dir, action)
+            logging.info("Attempting to execute command from masternode object: {}".format(cmd))
+            '''
+            need to have a threadpool and throw this in there and await the result
+            '''
+            result = self.connection.run(cmd, hide=False)
+            logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
+            return result.stdout
+        except UnexpectedExit as e:
+            #possibly try to start  the daemon again
+            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
+            return '{"status":"restart"}'
+        except Exception as e:
+            logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e), exc_info=e)
+            return 'exception'
+
 
 
 '''
@@ -136,6 +211,7 @@ asynchronous do cli action
 async def async_dacli(masternode, action, coin = "Polis"):
     # noinspection PyBroadException
     try:
+
         kwargs = {}
         if "connection_certificate" in masternode :
             kwargs['key_filename'] = masternode["connection_certificate"]
@@ -242,6 +318,7 @@ with app.subroute("/scripts") as scripts:
         try:
             mnidx = int(request.args.get(b'mnidx',[0])[0])
             masternode = config["masternodes"][mnidx]
+            coin_name = "polis"
             kwargs = {}
             if "connection_certificate" in masternode:
                 kwargs['key_filename'] = masternode["connection_certificate"]
@@ -250,20 +327,23 @@ with app.subroute("/scripts") as scripts:
                 if "password" in masternode:
                     kwargs['password'] = masternode['password']
 
+            connection = Connection(masternode["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
+            logging.info("Installing watcher on  {}".format(masternode["connection_string"]) )
             polis = config["Polis"]
 
-            connection.put(polis["watcher_cron"])
+            connection.put(polis["scripts"]["local_path"]+polis["scripts"]["watcher_cron"])
             result = connection.run("/bin/bash {} {} {} {}".format(
-                polis["watcher_cron"], polis["default_dir"], polis["daemon"],
+                polis["scripts"]["watcher_cron"], coin_name, polis["default_dir"], polis["daemon"],
                 polis["default_wallet_dir"]), hide=False)
 
             connection.close()
 
             if result.stdout == '' and result.stderr == '':
                 return "Watcher installed succesfully"
+
             return "Failed stdout: {}\nstderr: {} ".format(result.stdout, result.stderr)
         except Exception as e:
-            logging.error("Failed to install watcher: {} ".format(mn["connection_string"]), exc_info = e)
+            logging.error("Failed to install watcher: {} ".format(masternode["connection_string"]), exc_info = e)
             return "Exception"
 
 
@@ -367,12 +447,12 @@ def create(request):
             save it in msaternode["masternode_private_key"]
             """
             #Setup script which watches daemon and restarts it on crash
-            connection.put(polis["watcher_cron"])
+            connection.put(polis["scripts"]["local_path"]+polis["watcher_cron"])
             logging.info('Uploaded {}:\n {}'.format(polis["watcher_cron"], result))
             result = connection.run("/bin/bash {} {} {} {}".format(
-                polis["watcher_cron"], polis["default_dir"], polis["daemon"],
+                polis["scripts"]["watcher_cron"],coin_name, polis["default_dir"], polis["daemon"],
                 polis["default_wallet_dir"]), hide=False)
-            logging.info('Uploaded {}:\n {}'.format(polis["watcher_cron"], result))
+            logging.info('Uploaded {}:\n {}'.format(polis["scripts"]["watcher_cron"], result))
 
 
             #setup sentinel
@@ -439,7 +519,7 @@ with app.subroute("/mns") as mns:
     Nonblocking masternode status request using await
     '''
     @mns.route('/cli/mnsync/status', methods=['GET'])
-    async def cli_mnsync_status(request):
+    def cli_mnsync_status(request):
         mnidx = int(request.args.get(b'mnidx', [0])[0])
         logging.info("mnsync status called with mnidx: {} and mnss".format(mnidx))
         request.redirect("/mns/cli/action?mnidx={}&actidx={}".format(mnidx, 'mnss'))
@@ -448,7 +528,7 @@ with app.subroute("/mns") as mns:
     Nonblocking masternode status request using await
     '''
     @mns.route('/cli/masternode/status', methods=['GET'])
-    async def cli_masternode_status(request):
+    def cli_masternode_status(request):
         mnidx = int(request.args.get(b'mnidx', [0])[0])
         request.redirect("/mns/cli/action?mnidx={}&actidx={}".format(mnidx, 'mnstat'))
         return None
@@ -459,7 +539,7 @@ with app.subroute("/mns") as mns:
     mnidx: index of the masternode
     '''
     @mns.route('/cli/action', methods=['GET'])
-    async def cli_mn_action(request):
+    def cli_mn_action(request):
         mnidx =int(request.args.get(b'mnidx', [0])[0])
         actidx =request.args.get(b'actidx', [b'mnstat'])[0]
 
@@ -468,8 +548,9 @@ with app.subroute("/mns") as mns:
                    b'gi': 'getinfo',
                    b'mnss': 'mnsync status'}
 
-        logging.info("{} no blocking requested for mn {}  ".format(actions[actidx], mnidx))
-        result = await async_dacli(config['masternodes'][mnidx], actions[actidx])
+        mn = Masternode(config["masternodes"][mnidx])
+        coin = Polis(config["Polis"])
+        result = await mn.async_cli(actions[actidx], coin)
 
         return result
 
