@@ -195,6 +195,21 @@ def create(request):
         return render_without_request(template)
 
 '''
+Serve static CSS files
+'''
+@app.route('/css/', branch=True)
+def static(request):
+    return File("./css")
+
+'''
+Serve static Js files
+'''
+@app.route('/js/', branch=True)
+def static(request):
+    return File("./js")
+
+
+'''
 Sub routes pertaining to polis-cli actions
 '''
 with app.subroute("/mns") as mns:
