@@ -70,7 +70,8 @@
         
       mnidx = mn_status.attr("id").split("_").pop()
 
-      $.getJSON('/mns/cli/masternode/status', { mnidx: mnidx}, function(data) {
+      $.getJSON('/mns/cli/masternode/status', { mnidx: mnidx}, (function(mnidx){
+        return function(data) {
           console.log("Loading details for mn; "+ mnidx);
           console.log(data)
           
@@ -81,17 +82,19 @@
           }
           else if(data.status.startsWith("error")) {
               mn_status.text("VPS OFF");
-              $("row_"+mnidx).children('td, th').css('background-color','red');
+              $("#row_"+mnidx).children('td, th').css('background-color','red');
           }
           else{
+              console.log("Change to green: "+"#row_"+mnidx)
+              $("#row_"+mnidx).children('td, th').css('background-color','green');
               mn_status.text(data.status);
           }
           
           // Fill table with masternode list.
           // data: should contain json with IP:index in list and name of masternode( if in config) 
-      }); 
-
-    }
+      }})(mnidx)
+      )
+  }
     $('.update').bind('click', function() {
         var id = '#status_'+$(this).attr('id') 
         console.log("Updating status for : div"+ id); 
