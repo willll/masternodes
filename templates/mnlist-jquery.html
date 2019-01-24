@@ -67,14 +67,11 @@
     function updateStatus(mn_status)
     {
       mn_status.text('Updating...')
-        
-      mnidx = mn_status.attr("id").split("_").pop()
-
-      $.getJSON('/mns/cli/masternode/status', { mnidx: mnidx}, (function(mnidx){
-        return function(data) {
-          console.log("Loading details for mn; "+ mnidx);
+      $.getJSON('/mns/cli/masternode/status', { mnidx: mn_status.attr("id").split("_").pop()}, function(data) {
+          mnidx = mn_status.attr("id").split("_").pop()
           console.log(data)
-          
+          console.log("Loading details for mn; "+ mnidx);
+
           if(data.status.startsWith("restart"))
           {
               mn_status.text("Stopped, Restart mn daemon:")
@@ -92,9 +89,8 @@
           
           // Fill table with masternode list.
           // data: should contain json with IP:index in list and name of masternode( if in config) 
-      }})(mnidx)
-      )
-  }
+      })
+    }
     $('.update').bind('click', function() {
         var id = '#status_'+$(this).attr('id') 
         console.log("Updating status for : div"+ id); 
