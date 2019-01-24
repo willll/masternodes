@@ -1,22 +1,12 @@
-import time
-import sys
-import json
-import logging
 from fabric import Connection
-from invoke.exceptions import UnexpectedExit
 from klein import Klein
 import jinja2
-from twisted.internet import defer, task, reactor
-
-file = open("config.json", "r")
-config = json.load(file)
+from coin import Coin,Polis
+from vps import VPS
+from config import config,logging
 
 app = Klein()
 
-logging.basicConfig(
-    filename = "debug_rest_py.log",
-    filemode="w",
-    level = logging.INFO)
 
 '''
 '''
@@ -24,159 +14,6 @@ logging.basicConfig(
 def hello_world(request):
     return 'Hello, World! <a href="/mns/list">Masternodes</a>' \
            '<a href="/daemon/startpolis">Start Polis</a> <a href=''>Masternodes</a> '
-
-
-class Coin:
-    def __init__(self, name):
-        self.name = name
-
-class Polis(Coin):
-    def __init__(self, config):
-        Coin.__init__(self, "polis")
-        self.default_wallet_dir = config["default_wallet_dir"]
-        self.default_dir = config["default_dir"]
-        self.version_to_upload = config["version_to_upload"]
-        self.scripts = config["scripts"]
-        self.preconf = config["preconf"]
-        self.confdaemon = config["confdaemon"]
-        self.cli = config["cli"]
-        self.daemon = config["daemon"]
-        self.vps = config["vps"]
-        self.sentinel_git = config["sentinel_git"]
-
-class VPS:
-    def __init__(self, masternode):
-        self.masternode = masternode
-        kwargs = {}
-        if "connection_certificate" in masternode :
-            kwargs['key_filename'] = masternode["connection_certificate"]
-        else:
-            if "password" in masternode:
-                kwargs['password'] = masternode["password"]
-
-        try:
-            self.connection = Connection(masternode["connection_string"], connect_timeout=31, connect_kwargs=kwargs)
-        except UnexpectedExit as e:
-            #possibly try to start  the daemon again
-            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
-            return '{"status":"restart"}'
-        except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(masternode["connection_string"], e), exc_info=e)
-            return '{"status":"restart"}'
-
-    def __del__(self):
-        try:
-            self.connection.close()
-        except Exception as e:
-            logging.error('Could not close connection')
-            return 'failed to close connection'
-
-    def actions(self):
-        return
-    '''
-    check file's hash, useful to check if a script is correct
-    '''
-    def check_file(self):
-        return
-    '''
-    '''
-    def check_watcher_log(self):
-        return
-
-    '''
-    '''
-    def preconf(self, coin):
-        try:
-            connection.put(coin.preconf)
-            connection.run("/bin/bash {}".format(coin.preconf))
-            connection.put(coin.version_to_upload)
-            result = connection.run("mkdir {} && mkdir {} && tar zxvf {} {}".format(config["WalletsFolder"],
-                                   coin.default_dir,
-                                   coin.version_to_upload,
-                                   coin.default_dir), hide=False)
-
-            return result
-        except UnexpectedExit as e:
-            logging.info("Exceptioin in preconf")
-            return '{"status":"failed"}'
-        except Exception as e:
-            return '{"status":"failed"}'
-
-    '''
-    second part configuration script, generates privkey and gets polisd running properly
-    TODO: this can easily be all generated within the script and
-    simply pasted into the remote .wallet file at location. Might
-    require a polisd running locally though, to generate masternode
-    privkey 
-    '''
-    def daemonconf(self, coin):
-        try:
-            result = connection.put(coin.confdaemon )
-            result = connection.run("/bin/bash {} {} {} {} {}".format(
-                coin.confdaemon, coin.coin_name, coin.addnode,
-                coin.default_dir, this.masternode["connection_string"].split("@")[1].split(":")[0]), hide=False)
-        except Exception as e:
-            logging.error('Exception in daemonconf ')
-            return  '{"status":"failed"}'
-
-    '''
-    '''
-    def install_watcher(self, coin):
-        try:
-            self.connection.put(coin.scripts["local_path"]+coin.scripts["watcher_cron"])
-            logging.info('Uploaded watcher_cron.sh')
-            result = self.connection.run("/bin/bash {} {} {} {}".format(
-                coin.scripts["watcher_cron"], coin.name, coin.default_dir, coin.daemon,
-                coin.default_wallet_dir), hide=False)
-            if result.stdout == '' and result.stderr == '':
-                return "{'status':'success'}"
-
-            return "{'status':'There was a problem installing watcher'}"
-        except UnexpectedExit as e:
-            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
-            return '{"status":"failed"}'
-        except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(masternode["connection_string"], e), exc_info=e)
-            return '{"status":"failed"}'
-
-
-    def install_sentinel(self, coin):
-        try:
-            connection.put(coin.scripts["local_path"]+coin.scripts["sentinel_setup"])
-            result = connection.run("/bin/bash {} {} {} {}".format(coin.scripts["sentinel_setup"],
-                                               coin.sentinel_git,
-                                               coin.default_dir,
-                                               coin.coin_name), hide=False)
-            logging.info('Uploaded sentinel_setup.sh:\n {}'.format(result))
-            return result
-        except UnexpectedExit as e:
-            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
-            return '{"status":"failed"}'
-        except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(masternode["connection_string"], e), exc_info=e)
-            return '{"status":"failed"}'
-    '''
-    eventually offer async_cli functions
-    '''
-    def async_cli(self, action, coin):
-        try:
-            cmd = "{}/{} --datadir={} {}".format(coin.default_dir,coin.cli, coin.default_wallet_dir, action)
-            logging.info("Attempting to execute command from masternode object: {}".format(cmd))
-            '''
-            need to have a threadpool and throw this in there and await the result
-            '''
-            result = self.connection.run(cmd, hide=False)
-            logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
-            return result.stdout
-        except UnexpectedExit as e:
-            #possibly try to start  the daemon again
-            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
-            return '{"status":"restart"}'
-        except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e), exc_info=e)
-            return '{"status":"restart"}'
-
-
 
 '''
 Temporary fix for templating
@@ -493,9 +330,8 @@ with app.subroute("/mns") as mns:
                    b'gi': 'getinfo',
                    b'mnss': 'mnsync status'}
 
-        mn = VPS(config["masternodes"][mnidx])
         coin = Polis(config["Polis"])
+        mn = VPS(config["masternodes"][mnidx], coin)
         result = mn.async_cli(actions[actidx], coin)
 
         return result
-
