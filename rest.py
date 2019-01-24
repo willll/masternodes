@@ -1,14 +1,12 @@
-import logging
 import json
-from fabric import Connection
 from klein import Klein
 from twisted.web.static import File
-from invoke.exceptions import UnexpectedExit
 from twisted.internet.defer import succeed
 import jinja2
 from coin import Coin,Polis
 from vps import VPS
 from config import config,logging
+from klein import run, route
 
 app = Klein()
 
@@ -194,18 +192,20 @@ def create(request):
         template="new_mn.html"
         return render_without_request(template)
 
+
 '''
 Serve static CSS files
 '''
 @app.route('/css/', branch=True)
-def static(request):
+def static_css(request):
     return File("./css")
+
 
 '''
 Serve static Js files
 '''
 @app.route('/js/', branch=True)
-def static(request):
+def static_js(request):
     return File("./js")
 
 
