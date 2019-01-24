@@ -155,7 +155,7 @@ class VPS:
             return '{"status":"restart"}'
         except Exception as e:
             logging.error('Could not do_action {} : {}'.format(self.getIP(), e), exc_info=e)
-            return '{"status":"restart"}'
+            return '{"status":"error"}'
 
     def daemon_action(self, coin):
         try:
