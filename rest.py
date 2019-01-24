@@ -14,9 +14,9 @@ config = json.load(file)
 app = Klein()
 
 logging.basicConfig(
-    filename = "debug_rest_py.log",
+    filename="debug_rest_py.log",
     filemode="w",
-    level = logging.INFO)
+    level=logging.INFO)
 
 '''
 '''
@@ -58,7 +58,7 @@ class VPS:
             self.connection = Connection(masternode["connection_string"], connect_timeout=31, connect_kwargs=kwargs)
         except UnexpectedExit as e:
             #possibly try to start  the daemon again
-            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
+            logging.error('{} exited unexpectedly'.format(coin.cli), exc_info=e)
             return '{"status":"restart"}'
         except Exception as e:
             logging.error('Could not do_action {} : {}'.format(masternode["connection_string"], e), exc_info=e)
@@ -71,8 +71,22 @@ class VPS:
             logging.error('Could not close connection')
             return 'failed to close connection'
 
-    def actions(self):
-        return
+    def actions(self, action):
+        try:
+            # list of actions that are accepted
+            actions = {'clean_wallet':'',
+                    'kill_daemon':'',
+                    'view_crontab':'crontab -l',
+                    'view_script':'',
+                    'start_polis':''}
+
+            result = self.connection.run(actions[action], hide=False)
+
+            return result.stdout
+        except Exception as e :
+            logging.error('Problem in actions method for {}'.format(action), exc_info=e)
+            return "{'status':'restart'}"
+
     '''
     check file's hash, useful to check if a script is correct
     '''
@@ -83,17 +97,20 @@ class VPS:
     def check_watcher_log(self):
         return
 
+    def getIP(self):
+        return self.masternode["connection_string"].split("@")[1].split(":")[0]
+
     '''
     '''
     def preconf(self, coin):
         try:
-            connection.put(coin.preconf)
-            connection.run("/bin/bash {}".format(coin.preconf))
-            connection.put(coin.version_to_upload)
-            result = connection.run("mkdir {} && mkdir {} && tar zxvf {} {}".format(config["WalletsFolder"],
-                                   coin.default_dir,
-                                   coin.version_to_upload,
-                                   coin.default_dir), hide=False)
+            self.connection.put(coin.preconf)
+            self.connection.run("/bin/bash {}".format(coin.preconf))
+            self.connection.put(coin.version_to_upload)
+            result = self.connection.run("mkdir {} && mkdir {} && tar zxvf {} {}".format(config["WalletsFolder"],
+                                                                                         coin.default_dir,
+                                                                                         coin.version_to_upload,
+                                                                                         coin.default_dir), hide=False)
 
             return result
         except UnexpectedExit as e:
@@ -111,10 +128,10 @@ class VPS:
     '''
     def daemonconf(self, coin):
         try:
-            result = connection.put(coin.confdaemon )
-            result = connection.run("/bin/bash {} {} {} {} {}".format(
+            result = self.connection.put(coin.confdaemon )
+            result = self.connection.run("/bin/bash {} {} {} {} {}".format(
                 coin.confdaemon, coin.coin_name, coin.addnode,
-                coin.default_dir, this.masternode["connection_string"].split("@")[1].split(":")[0]), hide=False)
+                coin.default_dir, self.getIP()), hide=False)
         except Exception as e:
             logging.error('Exception in daemonconf ')
             return  '{"status":"failed"}'
@@ -144,9 +161,9 @@ class VPS:
         try:
             connection.put(coin.scripts["local_path"]+coin.scripts["sentinel_setup"])
             result = connection.run("/bin/bash {} {} {} {}".format(coin.scripts["sentinel_setup"],
-                                               coin.sentinel_git,
-                                               coin.default_dir,
-                                               coin.coin_name), hide=False)
+                                                                   coin.sentinel_git,
+                                                                   coin.default_dir,
+                                                                   coin.coin_name), hide=False)
             logging.info('Uploaded sentinel_setup.sh:\n {}'.format(result))
             return result
         except UnexpectedExit as e:
@@ -173,9 +190,20 @@ class VPS:
             logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
             return '{"status":"restart"}'
         except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e), exc_info=e)
+            logging.error('Could not do_action {} : {}'.format(self.getIP(), e), exc_info=e)
             return '{"status":"restart"}'
 
+    def daemon_action(self, coin):
+        try:
+            cmd = "{}/{} --datadir={}".format(coin.default_dir, coin.daemon, coin.default_wallet_dir)
+            result = self.connection.run(cmd, hide=False)
+            logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
+            return result.stdout
+        except UnexpectedExit as e:
+            logging.warning('{} exited unexpectedly'.format(coin.daemon), exc_info=e)
+            return '{"status":"restart"}'
+        except Exception as e:
+            logging.error('Could not do action on daemon at {}'.format(self.getIP()))
 
 
 '''
@@ -195,79 +223,7 @@ def render_without_request(template_name, **template_vars):
     )
     template = env.get_template(template_name)
     return template.render(**template_vars)
-'''
-'''
-def shell_actions(action, masternode):
-    try:
-        # list of actions that are accepted
-        actions = {'clean_wallet':'',
-                'kill_daemon':'',
-                'view_crontab':'crontab -l',
-                'view_script':'',
-                'start_polis':''}
 
-        kwargs = {}
-        if "connection_certificate" in masternode :
-            kwargs['key_filename'] = masternode["connection_certificate"]
-        else:
-            # Must be mutually excluded
-            if "password" in masternode:
-                kwargs['password'] = masternode["password"]
-
-        connection = Connection(masternode["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
-        logging.info('>>> Got connection to {} using {} '.format(masternode["connection_string"], kwargs))
-
-        result =  connection.run(actions[action], hide=False)
-        logging.info(">>> Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
-
-        connection.close()
-        return result
-    except Exception as e :
-        logging.error('Could not getinfo  : {}'.format('polisd'), exc_info=e)
-        return "shell_actions failed"
-
-'''
-This can be used to restart daemon if getinfo isnt responding, and mn is down likely because it crashed
-'''
-def do_action_daemon(masternode, action = ['--daemon'], coin = 'Polis'):
-    try:
-        kwargs = {}
-        if "connection_certificate" in masternode :
-            kwargs['key_filename'] = masternode["connection_certificate"]
-        else :
-            # Must be mutually excluded
-            if "password" in masternode:
-                kwargs['password'] = masternode["password"]
-
-        connection = Connection(masternode["connection_string"],  connect_timeout=31, connect_kwargs=kwargs)
-        logging.info('>>> Got connection to {} using {} '.format(masternode["connection_string"], kwargs))
-
-        if "destination_folder" in masternode: 
-            conx_str = '{}/{}'.format( masternode["destination_folder"],
-                                      config[coin]["daemon"])
-        elif "default_dir" in config[coin]:
-            conx_str = '{}/{}'.format(config[coin]["default_dir"],
-                                      config[coin]["daemon"])
-        else:
-            conx_str = config[coin]["daemon"]
-
-        if "wallet_directory" in masternode :
-            wallet_dir = masternode["wallet_directory"]
-            conx_str += " --datadir=" + wallet_dir
-        elif config[coin]["default_wallet_dir"]:
-            conx_str += " --datadir=" + config[coin]["default_wallet_dir"]
-
-        conx_str += " "+action
-        result =  connection.run(conx_str, hide=False)
-        logging.info('{} executed on {}'.format(action, masternode["connection_string"]))
-
-        connection.close()
-        logging.info('Connection closed to {} '.format(masternode["connection_string"]))
-        return result.stdout
-
-    except Exception as e:
-        logging.error('Problem in do_action_daemon {}'.format(masternode["connection_string"]), exc_info=e)
-        return 'failed'
 
 '''
 Sub routes pertaining to polis-cli actions
@@ -289,10 +245,9 @@ with app.subroute("/daemon") as daemon:
 
             result='Attempted starting: '+', '.join(mns)
             for idx in mns:
-                address = config['masternodes'][int(idx)]
-                result = "<p>Masternode: "+str(address)+"</p>"
-                for r in do_action_daemon(address, actions):
-                    result += "<p>"+str(r) +"</p>\n"
+                vps = VPS(config['masternodes'][int(idx)])
+                result = vps.daemon_action(Polis(config["Polis"]))
+                logging.info("Restarted {} got: {}".format(vps.getIP(), result))
 
             return "Result of polisd {}: {} <br><a href=/mns/cli/masternodes/status></a>".format(actions, result)
         else:
@@ -316,7 +271,8 @@ with app.subroute("/daemon") as daemon:
     @daemon.route('/launch', methods=['GET'])
     def daemon_masternode_start(request):
         mn_idx = int(request.args.get(b'mn')[0])
-        result = do_action_daemon(config['masternodes'][mn_idx])
+
+        result = VPS(masternode).daemon_action(config['masternodes'][mn_idx], Polis(config['Polis']))
         logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
         return result
 
@@ -335,8 +291,7 @@ with app.subroute("/scripts") as scripts:
     @scripts.route('/watcher', methods=['GET'])
     def watcher_install(request):
         mnidx = int(request.args.get(b'mnidx',[0])[0])
-        masternode = config["masternodes"][mnidx]
-        return VPS(masternode).install_watcher(Polis(config["Polis"]))
+        return VPS(config["masternodes"][mnidx]).install_watcher(Polis(config["Polis"]))
 
 '''
 Manage the config file from web
@@ -371,9 +326,6 @@ with app.subroute("/config") as conf:
         return render_without_request()
 
 
-
-
-
 '''
 Create a new MN:
 Deploy a new MN based on form information, also save it to config
@@ -386,18 +338,19 @@ TODO:
 '''
 @app.route('/create',methods=['POST', 'GET'])
 def create(request):
-    if(request.method == "POST"):
-
+    if request.method == "POST":
         password = request.args.get('password')
 
         logging.info('ip = {}, password = {}, port = {}, name = {}'.format(request.args.get('ip'),
-            password,request.args.get('port'),request.args.get('name')))
+                                                                           password,
+                                                                           request.args.get('port'),
+                                                                           request.args.get('name')))
 
         vps = VPS({
             "connection_sting": "{}@{}:{}".format(request.args.get('user'), request.args.get('host'),
-                request.args.get('port)')),
-            "password":password,
-            "name":request.args.get("name") })
+                                                  request.args.get('port')),
+            "password": password,
+            "name": request.args.get("name")})
 
         coin = Polis(config['Polis'])
 
@@ -421,7 +374,6 @@ def create(request):
         with open('config.json', 'w') as outfile:
             json.dump(config, outfile)
 
-        #save masternode to config.json.
         return result
 
     else:
@@ -432,9 +384,6 @@ def create(request):
 Sub routes pertaining to polis-cli actions
 '''
 with app.subroute("/mns") as mns:
-
-
-
     '''
     returns rendered list of masternodes (mnlist-jquery.html), with a list of masternodes to preload into DOM
     TODO: change config format to  IP:{...information about masternode..}
@@ -496,6 +445,8 @@ with app.subroute("/mns") as mns:
         mn = VPS(config["masternodes"][mnidx])
         coin = Polis(config["Polis"])
         result = mn.async_cli(actions[actidx], coin)
-
+        '''
+        TODO: setup a websocket channel to talk to the front end
+        '''
         return result
 
