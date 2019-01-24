@@ -7,6 +7,7 @@ from coin import Coin,Polis
 from vps import VPS
 from config import config,logging
 from klein import run, route
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 app = Klein()
 
@@ -84,7 +85,7 @@ with app.subroute("/daemon") as daemon:
     def daemon_masternode_start(request):
         mn_idx = int(request.args.get(b'mn')[0])
 
-        result = VPS(config["masternodes"][mnidx]).daemon_action(Polis(config['Polis']))
+        result = VPS(masternode).daemon_action(config['masternodes'][mn_idx], Polis(config['Polis']))
         logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
         return result
 
@@ -236,14 +237,7 @@ with app.subroute("/mns") as mns:
     @mns.route('/cron/read')
     def cron_read(request):
         mnidx = int(request.args.get(b'mnidx', [0])[0])
-        coin = Polis(config["Polis"])
-        vps = VPS(config["masternodes"][mnidx], coin)
-        result = {"result": vps.actions("view_crontab").splitlines()}
-        logging.info("Crontab requested got:\n{}".format(result))
-
-        return json.dumps(result)
-
-
+        return succeed()
 
     '''
     Nonblocking masternode status request using await
@@ -269,6 +263,7 @@ with app.subroute("/mns") as mns:
     mnidx: index of the masternode
     '''
     @mns.route('/cli/action', methods=['GET'])
+    @inlineCallbacks
     def cli_mn_action(request):
         mnidx =int(request.args.get(b'mnidx', [0])[0])
         actidx =request.args.get(b'actidx', [b'mnstat'])[0]
@@ -280,8 +275,8 @@ with app.subroute("/mns") as mns:
 
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
-        result = vps.async_cli(actions[actidx], coin)
+        result = yield vps.async_cli(actions[actidx], coin)
         '''
         TODO: setup a websocket channel to talk to the front end
         '''
-        return result
+        returnValue(result)
