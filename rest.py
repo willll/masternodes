@@ -194,11 +194,11 @@ def create(request):
 
 
 '''
-Serve static CSS files
+Serve static CSS files/icons
 '''
-@app.route('/css/', branch=True)
-def static_css(request):
-    return File("./css")
+@app.route('/static/', branch=True)
+def static_static(request):
+    return File("./static")
 
 
 '''

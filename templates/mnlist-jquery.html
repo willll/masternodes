@@ -12,7 +12,8 @@
         }
 
     </style>
-    <link href="/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-dark text-white">
 
@@ -41,7 +42,7 @@
         <th scope="row">{{item.idx}}</th>
         <td>{{ item.cnx }}</td>
         <td><button class='install btn btn-danger btn-xs' href='#' id='install_{{ item.idx }}'>install watcher {{item.idx}}</button></td>
-        <td><button class='update btn btn-primary btn-xs' href='#' id='update_{{ item.idx }}'>update {{item.idx}}</button></td>
+        <td><button class='update btn btn-primary btn-xs glyphicon glyphicon-refresh' href='#' id='update_{{ item.idx }}'><i class="fas fa-sync-alt"></i></button></td>
         <td><button class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}'>mnsync status {{item.idx}}</button></td>
         <td><button class='getinfo btn btn-info btn-xs' href='#' id='getinfo_{{ item.idx }}'>getinfo {{item.idx}}</button></td>
         <td><button class='getcron btn btn-info btn-xs' href='#' id='getcron_{{ item.idx }}'>getcron {{item.idx}}</button></td>
