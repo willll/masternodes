@@ -4,36 +4,53 @@
     <title>Masternode List</title>
     <script src="/js/jquery.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>
-  </body>
+    </body>
     <style>
         #output{
             width: 500px;
             height:400px;
         }
+
     </style>
-    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-dark text-white">
 
-<h1></h1>
+<br/>
 
+<button class-
+'updateAll'>Update all</button>
 
-<button class-'updateAll'>Update all</button>
-    <ul id="masternodes">
+<table class="table table-striped table-bordered table-dark">
+    <thead>
+    <tr>
+        <th scope="col">#</th>
+        <th scope="col">ID</th>
+        <th scope="col">Install</th>
+        <th scope="col">Update</th>
+        <th scope="col">Status</th>
+        <th scope="col">Getinfo</th>
+        <th scope="col">Getcron</th>
+        <th scope="col">Getconfig</th>
+        <th scope="col">Status</th>
+    </tr>
+    </thead>
+    <tbody>
     {% for item in masternodes %}
-    <li>{{ item.cnx }} |
-        <button class='install' id='install_{{ item.idx }}' href='#'>install watcher {{item.idx}}</button>  |
-        <button class='update' id='update_{{ item.idx }}' href='#'>update {{item.idx}}</button>
-        <button class='mnsync_status' id='mnsyncstatus_{{ item.idx }}' href='#'>mnsync status {{item.idx}}</button>
-        <button class='getinfo' id='getinfo_{{ item.idx }}' href='#'>getinfo {{item.idx}}</button>
-        <button class='getcron' id='getcron_{{ item.idx }}' href='#'>getcron {{item.idx}}</button>
-        <button class='getconfig' id='getconfig_{{ item.idx }}' href='#'>getconfig {{item.idx}}</button>
-        <div class='status' id='status_{{item.idx}}'/>
-    </li>
+    <tr>
+        <th scope="row">{{item.idx}}</th>
+        <td>{{ item.cnx }}</td>
+        <td><button class='install btn btn-danger btn-xs' href='#' id='install_{{ item.idx }}'>install watcher {{item.idx}}</button></td>
+        <td><button class='update btn btn-primary btn-xs' href='#' id='update_{{ item.idx }}'>update {{item.idx}}</button></td>
+        <td><button class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}'>mnsync status {{item.idx}}</button></td>
+        <td><button class='getinfo btn btn-info btn-xs' href='#' id='getinfo_{{ item.idx }}'>getinfo {{item.idx}}</button></td>
+        <td><button class='getcron btn btn-info btn-xs' href='#' id='getcron_{{ item.idx }}'>getcron {{item.idx}}</button></td>
+        <td><button class='getconfig btn btn-info btn-xs' href='#' id='getconfig_{{ item.idx }}'>getconfig {{item.idx}}</button></td>
+        <td><div class='status' id='status_{{item.idx}}'/></td>
+    </tr>
     {% endfor %}
-    </ul>
-    <textarea id='output'>
-    </textarea>
+    </tbody>
+</table>
 
 <script type=text/javascript>
     function installScript(id)
@@ -127,6 +144,7 @@
       updateAll();
 
     });
+
 </script>
 
 </body>
