@@ -1,6 +1,6 @@
 from invoke.exceptions import UnexpectedExit
 from fabric import Connection
-from config import logging
+from config import logging,config
 
 class VPS:
     def __init__(self, masternode, coin):
@@ -111,14 +111,14 @@ class VPS:
             logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
             return '{"status":"failed"}'
         except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(masternode["connection_string"], e), exc_info=e)
+            logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e), exc_info=e)
             return '{"status":"failed"}'
 
 
     def install_sentinel(self, coin):
         try:
-            connection.put(coin.scripts["local_path"]+coin.scripts["sentinel_setup"])
-            result = connection.run("/bin/bash {} {} {} {}".format(coin.scripts["sentinel_setup"],
+            self.connection.put(coin.scripts["local_path"]+coin.scripts["sentinel_setup"])
+            result = self.connection.run("/bin/bash {} {} {} {}".format(coin.scripts["sentinel_setup"],
                                                                    coin.sentinel_git,
                                                                    coin.default_dir,
                                                                    coin.coin_name), hide=False)
@@ -128,7 +128,7 @@ class VPS:
             logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
             return '{"status":"failed"}'
         except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(masternode["connection_string"], e), exc_info=e)
+            logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e), exc_info=e)
             return '{"status":"failed"}'
     '''
     eventually offer async_cli functions
