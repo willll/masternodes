@@ -12,6 +12,12 @@ class VPS:
             if "password" in masternode:
                 kwargs['password'] = masternode["password"]
 
+        if "destination_folder" in masternode :
+            self.installed_folder = masternode["destination_folder"]
+        else:
+            self.installed_folder = coin.default_dir
+
+
         try:
             self.connection = Connection(masternode["connection_string"], connect_timeout=31, connect_kwargs=kwargs)
         except UnexpectedExit as e:
@@ -66,9 +72,9 @@ class VPS:
             self.connection.run("/bin/bash {}".format(coin.preconf))
             self.connection.put(coin.version_to_upload)
             result = self.connection.run("mkdir {} && mkdir {} && tar zxvf {} {}".format(config["WalletsFolder"],
-                                                                                         coin.default_dir,
+                                                                                         self.installed_folder,
                                                                                          coin.version_to_upload,
-                                                                                         coin.default_dir), hide=False)
+                                                                                         self.installed_folder), hide=False)
 
             return result
         except UnexpectedExit as e:
@@ -89,7 +95,7 @@ class VPS:
             result = self.connection.put(coin.confdaemon )
             result = self.connection.run("/bin/bash {} {} {} {} {}".format(
                 coin.confdaemon, coin.coin_name, coin.addnode,
-                coin.default_dir, self.getIP()), hide=False)
+                self.installed_folder, self.getIP()), hide=False)
         except Exception as e:
             logging.error('Exception in daemonconf ')
             return  '{"status":"failed"}'
@@ -120,7 +126,7 @@ class VPS:
             self.connection.put(coin.scripts["local_path"]+coin.scripts["sentinel_setup"])
             result = self.connection.run("/bin/bash {} {} {} {}".format(coin.scripts["sentinel_setup"],
                                                                    coin.sentinel_git,
-                                                                   coin.default_dir,
+                                                                    self.installed_folder,
                                                                    coin.coin_name), hide=False)
             logging.info('Uploaded sentinel_setup.sh:\n {}'.format(result))
             return result
@@ -135,7 +141,7 @@ class VPS:
     '''
     def async_cli(self, action, coin):
         try:
-            cmd = "{}/{} --datadir={} {}".format(coin.default_dir,coin.cli, coin.default_wallet_dir, action)
+            cmd = "{}/{} --datadir={} {}".format(self.installed_folder, coin.cli, coin.default_wallet_dir, action)
             logging.info("Attempting to execute command from masternode object: {}".format(cmd))
             '''
             need to have a threadpool and throw this in there and await the result
@@ -153,7 +159,7 @@ class VPS:
 
     def daemon_action(self, coin):
         try:
-            cmd = "{}/{} --datadir={}".format(coin.default_dir, coin.daemon, coin.default_wallet_dir)
+            cmd = "{}/{} --datadir={}".format(self.installed_folder, coin.daemon, coin.default_wallet_dir)
             result = self.connection.run(cmd, hide=False)
             logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
             return result.stdout
