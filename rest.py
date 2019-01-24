@@ -1,7 +1,14 @@
-import json
 import logging
+import json
+from fabric import Connection
 from klein import Klein
+from twisted.web.static import File
+from invoke.exceptions import UnexpectedExit
+from twisted.internet.defer import succeed
 import jinja2
+from coin import Coin,Polis
+from vps import VPS
+from config import config,logging
 
 app = Klein()
 
@@ -249,8 +256,8 @@ with app.subroute("/mns") as mns:
                    b'gi': 'getinfo',
                    b'mnss': 'mnsync status'}
 
-        mn = VPS(config["masternodes"][mnidx])
         coin = Polis(config["Polis"])
+        mn = VPS(config["masternodes"][mnidx], coin)
         result = mn.async_cli(actions[actidx], coin)
         '''
         TODO: setup a websocket channel to talk to the front end
