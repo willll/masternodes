@@ -113,7 +113,7 @@ class VPS:
             logging.info('Uploaded watcher_cron.sh')
             result = self.connection.run("/bin/bash {} {} {} {}".format(
                 coin.scripts["watcher_cron"], coin.name, coin.default_dir, coin.daemon,
-                coin.default_wallet_dir), hide=False)
+                self.wallet_directory), hide=False)
             if result.stdout == '' and result.stderr == '':
                 return "{'status':'success'}"
 
@@ -146,7 +146,7 @@ class VPS:
     '''
     def async_cli(self, action, coin):
         try:
-            cmd = "{}/{} --datadir={} {}".format(self.installed_folder, coin.cli, coin.default_wallet_dir, action)
+            cmd = "{}/{} --datadir={} {}".format(self.installed_folder, coin.cli, self.wallet_directory, action)
             logging.info("Attempting to execute command from masternode object: {}".format(cmd))
             '''
             need to have a threadpool and throw this in there and await the result
