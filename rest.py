@@ -58,7 +58,7 @@ with app.subroute("/daemon") as daemon:
 
             result='Attempted starting: '+', '.join(mns)
             for idx in mns:
-                vps = VPS(config['masternodes'][int(idx)])
+                vps = VPS(config['masternodes'][int(idx)],Polis(config['Polis']))
                 result = vps.daemon_action(Polis(config["Polis"]))
                 logging.info("Restarted {} got: {}".format(vps.getIP(), result))
 
@@ -85,7 +85,7 @@ with app.subroute("/daemon") as daemon:
     def daemon_masternode_start(request):
         mn_idx = int(request.args.get(b'mn')[0])
 
-        result = VPS(config["masternodes"][mnidx]).daemon_action(Polis(config['Polis']))
+        result = VPS(config["masternodes"][mn_idx],Polis(config['Polis'])).daemon_action(Polis(config['Polis']))
         logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
         return result
 
@@ -104,7 +104,7 @@ with app.subroute("/scripts") as scripts:
     @scripts.route('/watcher', methods=['GET'])
     def watcher_install(request):
         mnidx = int(request.args.get(b'mnidx',[0])[0])
-        return VPS(config["masternodes"][mnidx]).install_watcher(Polis(config["Polis"]))
+        return VPS(config["masternodes"][mnidx],Polis(config['Polis'])).install_watcher(Polis(config["Polis"]))
 
 '''
 Manage the config file from web
@@ -159,13 +159,13 @@ def create(request):
                                                                            request.args.get('port'),
                                                                            request.args.get('name')))
 
+        coin = Polis(config['Polis'])
+
         vps = VPS({
             "connection_sting": "{}@{}:{}".format(request.args.get('user'), request.args.get('host'),
                                                   request.args.get('port')),
             "password": password,
-            "name": request.args.get("name")})
-
-        coin = Polis(config['Polis'])
+            "name": request.args.get("name")},coin)
 
         '''
         does all the apt get

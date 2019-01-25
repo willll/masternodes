@@ -17,6 +17,11 @@ class VPS:
         else:
             self.installed_folder = coin.default_dir
 
+        if "wallet_directory" in masternode :
+            self.wallet_directory = masternode["wallet_directory"]
+        else:
+            self.wallet_directory = coin.default_wallet_dir
+
 
         try:
             self.connection = Connection(masternode["connection_string"], connect_timeout=31, connect_kwargs=kwargs)
@@ -159,7 +164,7 @@ class VPS:
 
     def daemon_action(self, coin):
         try:
-            cmd = "{}/{} --datadir={}".format(self.installed_folder, coin.daemon, coin.default_wallet_dir)
+            cmd = "{}/{} --datadir={}".format(self.installed_folder, coin.daemon, self.wallet_directory)
             result = self.connection.run(cmd, hide=False)
             logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
             return result.stdout
