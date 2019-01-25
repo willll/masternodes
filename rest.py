@@ -84,7 +84,7 @@ with app.subroute("/daemon") as daemon:
     def daemon_masternode_start(request):
         mn_idx = int(request.args.get(b'mn')[0])
 
-        result = VPS(masternode).daemon_action(config['masternodes'][mn_idx], Polis(config['Polis']))
+        result = VPS(config["masternodes"][mnidx]).daemon_action(config['masternodes'][mn_idx], Polis(config['Polis']))
         logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
         return result
 
@@ -236,7 +236,14 @@ with app.subroute("/mns") as mns:
     @mns.route('/cron/read')
     def cron_read(request):
         mnidx = int(request.args.get(b'mnidx', [0])[0])
-        return succeed()
+        coin = Polis(config["Polis"])
+        vps = VPS(config["masternodes"][mnidx], coin)
+        result = {"result": vps.actions("view_crontab").splitlines()}
+        logging.info("Crontab requested got:\n{}".format(result))
+
+        return json.dumps(result)
+
+
 
     '''
     Nonblocking masternode status request using await
@@ -272,8 +279,8 @@ with app.subroute("/mns") as mns:
                    b'mnss': 'mnsync status'}
 
         coin = Polis(config["Polis"])
-        mn = VPS(config["masternodes"][mnidx], coin)
-        result = mn.async_cli(actions[actidx], coin)
+        vps = VPS(config["masternodes"][mnidx], coin)
+        result = vps.async_cli(actions[actidx], coin)
         '''
         TODO: setup a websocket channel to talk to the front end
         '''
