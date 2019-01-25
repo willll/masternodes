@@ -43,11 +43,7 @@ class VPS:
     def actions(self, action):
         try:
             # list of actions that are accepted
-            actions = {'clean_wallet':'',
-                    'kill_daemon':'',
-                    'view_crontab':'crontab -l',
-                    'view_script':'',
-                    'start_polis':''}
+            actions = {'clean_wallet':'', 'kill_daemon':'', 'view_crontab':'crontab -l', 'ps':'ps -ef'}
 
             result = self.connection.run(actions[action], hide=False)
 

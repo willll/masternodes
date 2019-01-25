@@ -106,6 +106,7 @@ with app.subroute("/scripts") as scripts:
         mnidx = int(request.args.get(b'mnidx',[0])[0])
         return VPS(config["masternodes"][mnidx],Polis(config['Polis'])).install_watcher(Polis(config["Polis"]))
 
+
 '''
 Manage the config file from web
 '''
@@ -209,6 +210,30 @@ Serve static Js files
 def static_js(request):
     return File("./js")
 
+'''
+Requests going straight to the shell or relative to the system itself
+'''
+with app.subroute("/sys") as sys:
+    '''
+    Read crontab for given mn and return
+    '''
+    @sys.route('/cron/read')
+    def cron_read(request):
+        mnidx = int(request.args.get(b'mnidx', [0])[0])
+        coin = Polis(config["Polis"])
+        vps = VPS(config["masternodes"][mnidx], coin)
+        result = {"result": vps.actions("view_crontab").splitlines()}
+        logging.info("Crontab requested got:\n{}".format(result))
+
+        return json.dumps(result)
+
+    '''
+    get processes running
+    '''
+    @sys.route('/ps')
+    def ps(request):
+        mnidx = int(request.args.get(b'mnidx', [0])[0])
+        return returnValue(json.dumps({"result": VPS(config["masternodes"][mnidx], Polis(config["Polis"])).actions("ps").splitlines()}))
 
 '''
 Sub routes pertaining to polis-cli actions
@@ -231,18 +256,6 @@ with app.subroute("/mns") as mns:
         logging.info("Returning preloaded template for frontend {}".format(preload))
         return render_without_request(template, masternodes=preload)
 
-    '''
-    Read crontab for given mn and return
-    '''
-    @mns.route('/cron/read')
-    def cron_read(request):
-        mnidx = int(request.args.get(b'mnidx', [0])[0])
-        coin = Polis(config["Polis"])
-        vps = VPS(config["masternodes"][mnidx], coin)
-        result = {"result": vps.actions("view_crontab").splitlines()}
-        logging.info("Crontab requested got:\n{}".format(result))
-
-        return json.dumps(result)
 
 
 
