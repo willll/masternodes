@@ -6,8 +6,10 @@ import jinja2
 from coin import Coin,Polis
 from vps import VPS
 from config import config,logging
-from klein import run, route
 from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet import threads
+from twisted.web import server
+
 
 app = Klein()
 
@@ -283,7 +285,6 @@ with app.subroute("/mns") as mns:
     mnidx: index of the masternode
     '''
     @mns.route('/cli/action', methods=['GET'])
-    @inlineCallbacks
     def cli_mn_action(request):
         mnidx =int(request.args.get(b'mnidx', [0])[0])
         actidx =request.args.get(b'actidx', [b'mnstat'])[0]
@@ -293,10 +294,14 @@ with app.subroute("/mns") as mns:
                    b'gi': 'getinfo',
                    b'mnss': 'mnsync status'}
 
+
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
-        result = yield vps.async_cli(actions[actidx], coin)
+
+        d = threads.deferToThread(lambda: vps.async_cli(actions[actidx], coin))
+        d.addCallback(returnValue)
+
+        return server.NOT_DONE_YET
         '''
         TODO: setup a websocket channel to talk to the front end
         '''
-        returnValue(result)
