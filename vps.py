@@ -24,13 +24,15 @@ class VPS:
 
 
         try:
-            self.connection = Connection(masternode["connection_string"], connect_timeout=31, connect_kwargs=kwargs)
+            self.connection = Connection(masternode["connection_string"],
+                                         connect_timeout=31, connect_kwargs=kwargs)
         except UnexpectedExit as e:
             #possibly try to start  the daemon again
-            logging.error('{} exited unexpectedly'.format(coin.cli), exc_info=e)
+            logging.error('Connecting failed unexpectedly', exc_info=e)
             return '{"status":"restart"}'
         except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(masternode["connection_string"], e), exc_info=e)
+            logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e),
+                          exc_info=e)
             return '{"status":"restart"}'
 
     def __del__(self):
@@ -140,7 +142,7 @@ class VPS:
     '''
     eventually offer async_cli functions
     '''
-    def async_cli(self, action, coin):
+    async def async_cli(self, action, coin):
         try:
             cmd = "{}/{} --datadir={} {}".format(self.installed_folder, coin.cli, self.wallet_directory, action)
             logging.info("Attempting to execute command from masternode object: {}".format(cmd))
@@ -154,9 +156,6 @@ class VPS:
             #possibly try to start  the daemon again
             logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
             return '{"status":"restart"}'
-        except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(self.getIP(), e), exc_info=e)
-            return '{"status":"error"}'
 
     def daemon_action(self, coin):
         try:

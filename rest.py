@@ -6,7 +6,7 @@ import jinja2
 from coin import Coin,Polis
 from vps import VPS
 from config import config,logging
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue, ensureDeferred
 from twisted.internet import threads
 from twisted.web import server
 
@@ -294,14 +294,13 @@ with app.subroute("/mns") as mns:
                    b'gi': 'getinfo',
                    b'mnss': 'mnsync status'}
 
-
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
 
-        d = threads.deferToThread(lambda: vps.async_cli(actions[actidx], coin))
-        d.addCallback(returnValue)
-
-        return server.NOT_DONE_YET
+        d = ensureDeferred(vps.async_cli(actions[actidx], coin))
+        return d
         '''
         TODO: setup a websocket channel to talk to the front end
+        TODO: receive config for creation of new mn
+        TODO:
         '''
