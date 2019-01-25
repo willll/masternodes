@@ -29,10 +29,11 @@
         <th scope="col">ID</th>
         <th scope="col">Install</th>
         <th scope="col">Update</th>
-        <th scope="col">Status</th>
-        <th scope="col">Getinfo</th>
-        <th scope="col">Getcron</th>
-        <th scope="col">Getconfig</th>
+        <th scope="col"></th>
+        <th scope="col"></th>
+        <th scope="col"></th>
+        <th scope="col"></th>
+        <th scope="col">Info</th>
         <th scope="col">Status</th>
     </tr>
     </thead>
@@ -41,17 +42,19 @@
     <tr id="row_{{ item.idx }}">
         <th scope="row" >{{item.idx+1}}</th>
         <td>{{ item.cnx }}</td>
-        <td><a class='install btn btn-danger btn-xs' href='#' id='install_{{ item.idx }}' alt="install watcher for {{item.idx}}"><i class="fas fa-eye"></i></a></td>
-        <td><a class='update btn btn-primary btn-xs glyphicon glyphicon-refresh' href='#' id='update_{{ item.idx }}' alt="Upodate masternode status"><i class="fas fa-sync-alt"></i></a></td>
-        <td><a class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}' alt="mnsync status"><i class="fas fa-charging-station"></i></a></td>
-        <td><a class='getinfo btn btn-info btn-xs' href='#' id='getinfo_{{ item.idx }}' alt="getinfo"><i class="fas fa-info"></i></button></td>
-        <td><a class='getcron btn btn-info btn-xs' href='#' id='getcron_{{ item.idx }}' alt="Get crontab"><i class="fas fa-business-time"></i></a></td>
-        <td><a class='getconfig btn btn-info btn-xs' href='#' id='getconfig_{{ item.idx }}' alt=""Get config "><i class="fas fa-cog"></i> </a></td>
+        <td><a class='install btn btn-danger btn-xs' href='#' id='install_{{ item.idx }}'><i title="install watcher for {{item.idx}}" class="fas fa-eye"></i></a></td>
+        <td><a class='update btn btn-primary btn-xs glyphicon glyphicon-refresh' href='#' id='update_{{ item.idx }}'><i title="Upodate masternode status" class="fas fa-sync-alt"></i></a></td>
+        <td><a class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}'><i title="mnsync status" class="fas fa-charging-station"></i></a></td>
+        <td><a class='getinfo btn btn-info btn-xs' href='#' id='getinfo_{{ item.idx }}'><i title="getinfo" class="fas fa-info"></i></a></td>
+        <td><a class='getcron btn btn-info btn-xs' href='#' id='getcron_{{ item.idx }}'><i title="Get crontab" class="fas fa-business-time"></i></a></td>
+        <td><a class='getconfig btn btn-info btn-xs' href='#' id='getconfig_{{ item.idx }}'><i title="Get config" class="fas fa-cog"></i></a></td>
+        <td><div class='display_getinfo' id='display_getinfo_{{item.idx}}'/></td>
         <td><div class='status' id='status_{{item.idx}}'/></td>
     </tr>
     {% endfor %}
     </tbody>
 </table>
+<textarea id="output" ></textarea>
 
 <script type=text/javascript>
     function installScript(id)
@@ -91,6 +94,15 @@
           // data: should contain json with IP:index in list and name of masternode( if in config) 
       })
     }
+    function getinfo(id)
+    {
+        getinfo_cell = $("#display_getinfo_"+id)
+        $.getJSON('/mns/cli/action', { mnidx: id, actidx: 'gi' }, function(data) {
+            getinfo_cell.append("Block: "+data.blocks+ "<br>v"+data.version)
+            console.log("getinfo: "+JSON.stringify(data))
+            $("#output").append(JSON.stringify(data));
+        });
+    }
     $('.update').bind('click', function() {
         var id = '#status_'+$(this).attr('id') 
         console.log("Updating status for : div"+ id); 
@@ -99,7 +111,11 @@
     $('.upodateAll').bind('click', function() {
         console.log("Update all" );
         updateAll();
-
+    });
+     $('.getinfo').bind('click', function(){
+        var id = $(this).attr('id').split("_")[1]
+        console.log("getinfo requested: "+id)
+        getinfo(id)
     });
     $('.install').bind('click', function(){ 
         var id = "#status_"+$(this).attr('id').split("_")[1] 
@@ -111,30 +127,25 @@
         var id = $(this).attr('id').split("_")[1]
         console.log("mnsync status requested: "+id)
         $.getJSON('/mns/cli/mnsync/status', { mnidx: id }, function(data) {
-            console.log("Mnsync result: "+data);
-            $("#output").append(data.AssetName);
+            console.log("Mnsync result: "+JSON.stringify(data))
+            $("#output").append(JSON.stringify(data));
          });
     });
     $('.getconfig').bind('click', function(){
         console.log("getconfig requested")
         $.getJSON('/config/read', {}, function(data) {
-            $("#output").append(data);
+            console.log("GetConfig: " + data.result)
+            $("#output").append(JSON.stringify);
         });
     });
     $('.getcron').bind('click', function(){
         var id = $(this).attr('id').split("_")[1]
-        console.log("This should fail for now")
-        $.getJSON('/mns/cron/read', { mnidx: id }, function(data) {
-            $("#output").append(data);
-        });
+        console.log("Crontab requested:")
+        $.getJSON('/sys/cron/read', { mnidx: id }, function(data) {
+            $("#output").append(data.result);
+        })
     });
-    $('.getinfo').bind('click', function(){
-        var id = $(this).attr('id').split("_")[1]
-        console.log("getinfo requested: "+id)
-        $.getJSON('/mns/cli/action', { mnidx: id, actidx: 'gi' }, function(data) {
-            $("#output").append(data);
-        });
-    });
+
     function updateAll()
     { 
         $(".status").each(function(){ 
