@@ -299,8 +299,4 @@ with app.subroute("/mns") as mns:
 
         d = ensureDeferred(vps.async_cli(actions[actidx], coin))
         return d
-        '''
-        TODO: setup a websocket channel to talk to the front end
-        TODO: receive config for creation of new mn
-        TODO:
-        '''
+
