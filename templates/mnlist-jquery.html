@@ -136,6 +136,7 @@
         $.getJSON('/config/read', {}, function(data) {
             console.log("GetConfig: " + data.result)
             $("#output").append(JSON.stringify);
+
         });
     });
     $('.getcron').bind('click', function(){

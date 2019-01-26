@@ -9,8 +9,6 @@ from config import config,logging
 from twisted.internet.defer import inlineCallbacks, returnValue, ensureDeferred
 from twisted.internet import threads
 from twisted.web import server
-
-
 app = Klein()
 
 '''
