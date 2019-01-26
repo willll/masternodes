@@ -156,6 +156,8 @@ class VPS:
             #possibly try to start  the daemon again
             logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
             return '{"status":"restart"}'
+        except Exception as e:
+            logging.error('Could not do action on daemon at {}'.format(self.getIP()))
 
     def daemon_action(self, coin):
         try:

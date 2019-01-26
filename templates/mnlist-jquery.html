@@ -27,8 +27,7 @@
     <tr>
         <th scope="col">#</th>
         <th scope="col">ID</th>
-        <th scope="col">Install</th>
-        <th scope="col">Update</th>
+        <th scope="col">Actions</th>
         <th scope="col"></th>
         <th scope="col"></th>
         <th scope="col"></th>
@@ -42,8 +41,13 @@
     <tr id="row_{{ item.idx }}">
         <th scope="row" >{{item.idx+1}}</th>
         <td>{{ item.cnx }}</td>
-        <td><a class='install btn btn-danger btn-xs' href='#' id='install_{{ item.idx }}'><i title="install watcher for {{item.idx}}" class="fas fa-eye"></i></a></td>
-        <td><a class='update btn btn-primary btn-xs glyphicon glyphicon-refresh' href='#' id='update_{{ item.idx }}'><i title="Upodate masternode status" class="fas fa-sync-alt"></i></a></td>
+        <td>
+            <select class='action'>
+                <option selected>None</option>
+                <option id='install_{{ item.idx }}'>install watcher for {{item.idx}}</option>
+                <option id='update_{{ item.idx }}'>Update masternode status</option>
+            </select>
+        </td>
         <td><a class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}'><i title="mnsync status" class="fas fa-charging-station"></i></a></td>
         <td><a class='getinfo btn btn-info btn-xs' href='#' id='getinfo_{{ item.idx }}'><i title="getinfo" class="fas fa-info"></i></a></td>
         <td><a class='getcron btn btn-info btn-xs' href='#' id='getcron_{{ item.idx }}'><i title="Get crontab" class="fas fa-business-time"></i></a></td>
@@ -121,6 +125,24 @@
         var id = "#status_"+$(this).attr('id').split("_")[1] 
         console.log("Clicked :"+id)
         installScript($(id))
+    });
+    $('.action').bind('change', function(){
+        var id = $(this).find(':selected')[0].id;
+        try {
+            if (id.match("^install_")) {
+                console.log("Installing  :"+id)
+                installScript($(id));
+            }
+            else if (id.match("^update_")) {
+                console.log("Updating status for : div"+ id);
+                updateStatus($(id));
+            }
+        } catch(err) {
+            console.log("Error while taking action for : div"+ id);
+        }
+
+        // reset the selector ...
+        $(this).prop('selectedIndex',0);
     });
     $('.mnsync_status').bind('click', function(){
         data = {"status":"Empty"}
