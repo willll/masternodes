@@ -84,8 +84,10 @@ with app.subroute("/daemon") as daemon:
     @daemon.route('/launch', methods=['GET'])
     def daemon_masternode_start(request):
         mn_idx = int(request.args.get(b'mn')[0])
+        reinndex = int(request.args.get(b'reinndex')[0])
+        coin = Polis(config['Polis'])
 
-        result = VPS(config["masternodes"][mn_idx],Polis(config['Polis'])).daemon_action(Polis(config['Polis']))
+        result = VPS(config["masternodes"][mn_idx],coin).daemon_action(coin, reinndex)
         logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
         return result
 

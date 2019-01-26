@@ -159,9 +159,11 @@ class VPS:
         except Exception as e:
             logging.error('Could not do action on daemon at {}'.format(self.getIP()))
 
-    def daemon_action(self, coin):
+    def daemon_action(self, coin, reindex = 0):
         try:
             cmd = "{}/{} --datadir={}".format(self.installed_folder, coin.daemon, self.wallet_directory)
+            if reindex == 1:
+                cmd += " --reindex"
             result = self.connection.run(cmd, hide=False)
             logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
             return result.stdout

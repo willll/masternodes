@@ -44,8 +44,10 @@
         <td>
             <select class='action'>
                 <option selected>None</option>
-                <option id='install_{{ item.idx }}'>install watcher for {{item.idx}}</option>
-                <option id='update_{{ item.idx }}'>Update masternode status</option>
+                <option id='install_{{ item.idx }}'>Install watcher</option>
+                <option id='update_{{ item.idx }}'>Update status</option>
+                <option id='restart_{{ item.idx }}'>Restart</option>
+                <option id='reindex_{{ item.idx }}'>Reindex</option>
             </select>
         </td>
         <td><a class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}'><i title="mnsync status" class="fas fa-charging-station"></i></a></td>
@@ -61,6 +63,7 @@
 <textarea id="output" ></textarea>
 
 <script type=text/javascript>
+
     function installScript(id)
     {
       mnidx = id.attr("id").split("_").pop()
@@ -82,7 +85,7 @@
           if(data.status.startsWith("restart"))
           {
               mn_status.text("Stopped, Restart mn daemon:")
-              mn_status.append("<a href='/daemon/launch?mn="+mnidx+"'>start polisd</a>");
+              mn_status.append("<a href='/daemon/launch?mn="+mnidx+"&reinndex=0'>start polisd</a>");
           }
           else if(data.status.startsWith("error")) {
               mn_status.text("VPS OFF");
@@ -98,6 +101,16 @@
           // data: should contain json with IP:index in list and name of masternode( if in config) 
       })
     }
+
+    function restartMN(id, reindex)
+    {
+      mnidx = id.split("_").pop();
+      console.log("restarting: "+ mnidx);
+      $.getJSON('/daemon/launch', { mnidx: mnidx, reindex : reindex }, function(data) {
+          console.log("Restarting MN : "+ mnidx + + " " + reindex? "and reindexing it ": "" );
+      });
+    }
+
     function getinfo(id)
     {
         getinfo_cell = $("#display_getinfo_"+id)
@@ -105,6 +118,14 @@
             getinfo_cell.append("Block: "+data.blocks+ "<br>v"+data.version)
             console.log("getinfo: "+JSON.stringify(data))
             $("#output").append(JSON.stringify(data));
+        });
+    }
+    function updateAll()
+    {
+        $(".status").each(function(){
+            var mn_status = $(this);
+            console.log("Filling up masternodes table"+ mn_status.attr("id"));
+            updateStatus(mn_status)
         });
     }
     $('.update').bind('click', function() {
@@ -134,11 +155,19 @@
                 installScript($(id));
             }
             else if (id.match("^update_")) {
-                console.log("Updating status for : div"+ id);
+                console.log("Updating status : "+ id);
                 updateStatus($(id));
             }
+            else if (id.match("^restart_")) {
+                console.log("Restarting mn :"+ id);
+                restartMN(id, 0);
+            }
+            else if (id.match("^reindex")) {
+                console.log("Reindexing : "+ id);
+                restartMN(id, 1);
+            }
         } catch(err) {
-            console.log("Error while taking action for : div"+ id);
+            console.log("Error while taking action for : "+ id + "("+ err + ")");
         }
 
         // reset the selector ...
@@ -168,15 +197,6 @@
             $("#output").append(data.result);
         })
     });
-
-    function updateAll()
-    { 
-        $(".status").each(function(){ 
-            var mn_status = $(this); 
-            console.log("Filling up masternodes table"+ mn_status.attr("id"));
-            updateStatus(mn_status)
-        }); 
-    }
   $( document ).ready(function() {
       console.log("Document ready")
       updateAll();
