@@ -106,6 +106,7 @@
     {
       mnidx = id.split("_").pop();
       console.log("restarting: "+ mnidx);
+      $("#row_"+mnidx).children('td, th').css('background-color','orange');
       $.getJSON('/daemon/launch', { mnidx: mnidx, reindex : reindex }, function(data) {
           console.log("Restarting MN : "+ mnidx + + " " + reindex? "and reindexing it ": "" );
       });

@@ -285,7 +285,7 @@ with app.subroute("/mns") as mns:
     mnidx: index of the masternode
     '''
     @mns.route('/cli/action', methods=['GET'])
-    def cli_mn_action(request):
+    async def cli_mn_action(request):
         mnidx =int(request.args.get(b'mnidx', [0])[0])
         actidx =request.args.get(b'actidx', [b'mnstat'])[0]
 
@@ -297,6 +297,6 @@ with app.subroute("/mns") as mns:
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
 
-        d = ensureDeferred(vps.async_cli(actions[actidx], coin))
+        d = await vps.async_cli(actions[actidx], coin)
         return d
 
