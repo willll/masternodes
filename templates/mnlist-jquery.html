@@ -62,6 +62,27 @@
 </table>
 <textarea id="output" ></textarea>
 
+<!-- warning modal for risky actions-->
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="myModalLabel">Risky action</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+         <p id="risky-action-warning"> abcd </p>
+      </div>
+      <div class="modal-footer">
+         <button type="button" class="btn btn-default" data-dismiss="modal" id="risky-cancel">Cancel</button>
+         <button type="button" class="btn btn-primary" data-dismiss="modal" id="risky-confirm">Do action anyways</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script type=text/javascript>
 
     function installScript(id)
@@ -100,6 +121,22 @@
           // Fill table with masternode list.
           // data: should contain json with IP:index in list and name of masternode( if in config) 
       })
+    }
+    /*
+        warn user when action may have consequences
+    */
+    function riskyAction(warning, action)
+    {
+        console.log("Risky action called")
+        $("p#risky-action-warning").text("<p>"+warning+"</p>")
+        $("#myModal").modal('show')
+        $("#risky-confirm").on("click", function(){
+            console.log("Doing risky action, warning: "+ warning)
+            action()
+        })
+        $("#risky-cancel").on("click", function(){
+            console.log("Risky action cancelled")
+        })
     }
 
     function restartMN(id, reindex)
@@ -165,7 +202,10 @@
             }
             else if (id.match("^reindex")) {
                 console.log("Reindexing : "+ id);
-                restartMN(id, 1);
+                riskyAction("Reindexing masternode could take a while, and might put you out of position", function(){
+                    console.log("Reindexing!!!!!")
+                    restartMN(id, 1);
+                })
             }
         } catch(err) {
             console.log("Error while taking action for : "+ id + "("+ err + ")");
