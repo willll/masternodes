@@ -15,6 +15,50 @@ default_wallet_conf_file = ""
 '''
 
 '''
+def is_vps_installed(connection):
+    isInstalled = False
+    try:
+        result = connection.run('dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev|grep -c "install ok installed"', hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        if result == 1 :
+            isInstalled = True;
+    except UnexpectedExit:
+        logging.info('{} does not exist !'.format(dir))
+    return isInstalled
+
+'''
+    BUG : Must be in root !
+'''
+def install_vps(connection):
+    try:
+        cmds = [ "touch /var/swap.img",
+                "chmod 600 /var/swap.img",
+                "dd if=/dev/zero of=/var/swap.img bs=1024k count=2000",
+                "mkswap /var/swap.img",
+                "swapon /var/swap.img",
+                "echo \"/var/swap.img none swap sw 0 0\" >> /etc/fstab",
+                "apt-get update -y",
+                "apt-get upgrade -y",
+                "apt-get dist-upgrade -y",
+                "apt-get install nano htop git -y",
+                "apt-get install build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils software-properties-common -y",
+                "apt-get install libboost-all-dev -y",
+                "add-apt-repository ppa:bitcoin/bitcoin -y",
+                "apt-get update -y",
+                "apt-get install libdb4.8-dev libdb4.8++-dev -y" ]
+
+        for cmd in cmds :
+            result = connection.run('{}'.format(cmd), hide=True)
+            msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+            logging.info(msg.format(result))
+        except Exception as e:
+            logging.error('Could not install vps', exc_info=e)
+
+
+'''
+
+'''
 def is_directory_exists(connection, dir):
     isExists = False
     try:
@@ -153,14 +197,17 @@ def init():
 def main():
     init()
 
+    # CLI arguments
     parser = argparse.ArgumentParser(description='Masternodes upgrade script')
-    parser.add_argument('--config', nargs='*', default="config.json", help='config file in Json format')
+    parser.add_argument('--config', nargs='?', default="config.json", help='config file in Json format')
+    parser.add_argument('-cleanConfig', action='store_false', help='clean up to config files')
     args = parser.parse_args()
 
+    # Load configuration file
     file = open(args.config)
-
     config = json.load(file)
 
+    # Global settings
     default_wallet_dir = config["Polis"]["default_wallet_dir"]
     default_wallet_conf_file = config["Polis"]["default_wallet_conf_file"]
 
@@ -178,6 +225,10 @@ def main():
             connection = Connection(cnx["connection_string"], connect_timeout=30, connect_kwargs=kwargs)
 
             target_directory = cnx["destination_folder"]
+
+            # Install VPS
+            if not is_vps_installed() :
+
 
             # Create directory if does not exist
             create_polis_directory(connection, target_directory)
@@ -204,7 +255,8 @@ def main():
                 # Clean up old wallet dir
                 clean_up_wallet_dir(connection, wallet_dir)
                 # Clean up the config file
-                clean_up_config(connection, wallet_conf_file, "clear addnode")
+                if args.cleanConfig :
+                    clean_up_config(connection, wallet_conf_file, "clear addnode")
                 # Start the new daemon
                 start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
 
