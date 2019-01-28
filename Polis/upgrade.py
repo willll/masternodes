@@ -4,6 +4,7 @@ import sys
 import json
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit
+import argparse
 
 '''
     Globals
@@ -152,10 +153,12 @@ def init():
 def main():
     init()
 
-    if len(sys.argv) > 2:
-        file = open(sys.argv[1], "r")
-    else:
-        file = open("config.json", "r")
+    parser = argparse.ArgumentParser(description='Masternodes upgrade script')
+    parser.add_argument('--config', nargs='*', default="config.json", help='config file in Json format')
+    args = parser.parse_args()
+
+    file = open(args.config)
+
     config = json.load(file)
 
     default_wallet_dir = config["Polis"]["default_wallet_dir"]
