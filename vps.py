@@ -67,6 +67,20 @@ class VPS:
     def getIP(self):
         return self.masternode["connection_string"].split("@")[1].split(":")[0]
 
+    def upgrade(self, coin):
+        try:
+            result = self.connection.put(coin.version_to_upload)
+            result = self.connection.put(coin.scripts["local_path"]+coin.scripts["upgrade"])
+            self.connection.run("/bin/bash {} {} {} {} {}".format(coin.scripts["upgrade"], coin.cli,
+                                                                  coin.installed_folder, coin.daemon,
+                                                                  coin.wallet_directory))
+            return result.stdout
+        except UnexpectedExit as e:
+             logging.info("Could not upload daemon bin")
+             return '{"status":"failed"}'
+        except Exception as e:
+            return '{"status":"failed"}'
+
     '''
     '''
     def preconf(self, coin):

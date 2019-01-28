@@ -196,6 +196,34 @@ def create(request):
         template="new_mn.html"
         return render_without_request(template)
 
+'''
+Upgrade masternode to new version
+ ->
+ (VPS)
+ polis-cli stop,
+ put new bins,
+ clear dat blockchain cache,
+ start_daemon,
+ (local)
+ masternode start 
+
+@param mnidx: index of the masternode to upgrade
+'''
+@app.route('/upgrade', methods=['POST', 'GET'])
+def upgrade(request):
+    if request.method == "POST":
+        mnidx =int(request.args.get(b'mnidx', [0])[0])
+        coin = Polis(config["Polis"])
+        vps = VPS(config["masternodes"][mnidx], coin)
+
+        vps.upgrade()
+
+    else:
+        template="upgrade.html"
+        return render_without_request(template)
+
+
+
 
 '''
 Serve static CSS files/icons

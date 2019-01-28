@@ -7,12 +7,19 @@ TODO: test new MN creation
 TODO: use ListBox on left side with list of IPs, should be searchable/filterable and can select multiple IPs
     with checkbox
 TODO: Display information fromt he block explorer about block # and other relevant
-TODO:
-
+TODO: Des checkbox pour sélectionner les mn en groupe
+TODO: Une barre d'actions en haut pour appliquer aux mn sélectionné
+TODO: un évent pour refesh la page aux 5 min
+TODO: masternode start from this script (via RPC)
+TODO: Enable multi threading or non blocking of requests/responses,
+    - WSGI, gunicorn, multiprocessing (python),
+    - https://stackoverflow.com/questions/40912982/how-can-my-twisted-klein-app-listen-on-multiple-ports
 '''
+
+
 from rest import app
 from config import config
 
-
 if __name__ == '__main__':
     app.run(host=config["Listen"]["host"], port=config["Listen"]["port"])
+

@@ -19,18 +19,50 @@
 
 <br/>
 
-<button class-
-'updateAll'>Update all</button>
+<!--
+<div class="container">
+  <div class="row">
+    <div class="col">
+      <input class="form-control" id="myInput" type="text" placeholder="Search..">
+    </div>
+    <div class="row">
+      <div class="col">
+        <button id="updateAll">Update all</button>
+      </div>
+    </div>
+  </div>
+  {% for item in masternodes %}
+  <div class="row">
+    <div class="col">
+        <span class="{{item.cnx}}">{{ item.cnx }}</span>
+    </div>
+    <div class="col">
+        <select class='action'>
+            <option selected>None</option>
+            <option id='install_{{ item.idx }}'>Install watcher</option>
+            <option id='update_{{ item.idx }}'>Update status</option>
+            <option id='restart_{{ item.idx }}'>Restart</option>
+            <option id='reindex_{{ item.idx }}'>Reindex</option>
+        </select>
+        <a class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}'><i title="mnsync status" class="fas fa-charging-station"></i></a>
+        <a class='getinfo btn btn-info btn-xs' href='#' id='getinfo_{{ item.idx }}'><i title="getinfo" class="fas fa-info"></i></a>
+        <a class='getcron btn btn-info btn-xs' href='#' id='getcron_{{ item.idx }}'><i title="Get crontab" class="fas fa-business-time"></i></a>
+        <a class='getconfig btn btn-info btn-xs' href='#' id='getconfig_{{ item.idx }}'><i title="Get config" class="fas fa-cog"></i></a>
+        <div class='display_getinfo' id='display_getinfo_{{item.idx}}'></div>
+        <div class='status' id='status_{{item.idx}}'></div>
+    </div>
+  </div>
+ {% endfor %}
+</div>
+-->
 
+<button id="updateAll">Update all</button>
 <table class="table table-striped table-bordered table-dark">
     <thead>
     <tr>
         <th scope="col">#</th>
         <th scope="col">ID</th>
         <th scope="col">Actions</th>
-        <th scope="col"></th>
-        <th scope="col"></th>
-        <th scope="col"></th>
         <th scope="col"></th>
         <th scope="col">Info</th>
         <th scope="col">Status</th>
@@ -50,10 +82,12 @@
                 <option id='reindex_{{ item.idx }}'>Reindex</option>
             </select>
         </td>
-        <td><a class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}'><i title="mnsync status" class="fas fa-charging-station"></i></a></td>
-        <td><a class='getinfo btn btn-info btn-xs' href='#' id='getinfo_{{ item.idx }}'><i title="getinfo" class="fas fa-info"></i></a></td>
-        <td><a class='getcron btn btn-info btn-xs' href='#' id='getcron_{{ item.idx }}'><i title="Get crontab" class="fas fa-business-time"></i></a></td>
-        <td><a class='getconfig btn btn-info btn-xs' href='#' id='getconfig_{{ item.idx }}'><i title="Get config" class="fas fa-cog"></i></a></td>
+        <td>
+            <a class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}'><i title="mnsync status" class="fas fa-charging-station"></i></a>
+            <a class='getinfo btn btn-info btn-xs' href='#' id='getinfo_{{ item.idx }}'><i title="getinfo" class="fas fa-info"></i></a>
+            <a class='getcron btn btn-info btn-xs' href='#' id='getcron_{{ item.idx }}'><i title="Get crontab" class="fas fa-business-time"></i></a>
+            <a class='getconfig btn btn-info btn-xs' href='#' id='getconfig_{{ item.idx }}'><i title="Get config" class="fas fa-cog"></i></a>
+        </td>
         <td><div class='display_getinfo' id='display_getinfo_{{item.idx}}'/></td>
         <td><div class='status' id='status_{{item.idx}}'/></td>
     </tr>
@@ -84,7 +118,19 @@
 </div>
 
 <script type=text/javascript>
-
+    /*
+        Filtering select code:
+        https://www.w3schools.com/bootstrap/tryit.asp?filename=trybs_filters_table&stacked=h
+        Dojo offers better / cleaner way to do this.
+    */
+    $(document).ready(function(){
+      $("#myInput").on("keyup", function() {
+        var value = $(this).val().toLowerCase();
+        $("#masternodeList").filter(function() {
+          $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+        });
+      });
+    });
     function installScript(id)
     {
       mnidx = id.attr("id").split("_").pop()
