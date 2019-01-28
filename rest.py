@@ -209,18 +209,15 @@ Upgrade masternode to new version
 
 @param mnidx: index of the masternode to upgrade
 '''
-@app.route('/upgrade', methods=['POST', 'GET'])
+@app.route('/upgrade', methods=['GET'])
 def upgrade(request):
-    if request.method == "POST":
-        mnidx =int(request.args.get(b'mnidx', [0])[0])
-        coin = Polis(config["Polis"])
-        vps = VPS(config["masternodes"][mnidx], coin)
+    mnidx =int(request.args.get(b'mnidx', [0])[0])
+    coin = Polis(config["Polis"])
+    vps = VPS(config["masternodes"][mnidx], coin)
 
-        vps.upgrade()
+    result = vps.upgrade()
+    return result
 
-    else:
-        template="upgrade.html"
-        return render_without_request(template)
 
 
 
