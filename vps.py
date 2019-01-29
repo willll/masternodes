@@ -69,17 +69,22 @@ class VPS:
 
     def upgrade(self, coin):
         try:
-            result = self.connection.put(coin.version_to_upload)
-            result = self.connection.put(coin.scripts["local_path"]+coin.scripts["upgrade"])
-            self.connection.run("/bin/bash {} {} {} {} {}".format(coin.scripts["upgrade"], coin.cli,
-                                                                  coin.installed_folder, coin.daemon,
-                                                                  coin.wallet_directory))
-            return result.stdout
+            self.connection.put("Polis/"+coin.version_to_upload)
+            logging.info("Uploaded {}".format(coin.version_to_upload))
+            self.connection.put(coin.scripts["local_path"]+coin.scripts["upgrade"])
+            cmd = "/bin/bash {} {} {} {} {} \"{}\"".format(coin.scripts["upgrade"], coin.cli, coin.default_dir, coin.daemon, coin.default_wallet_dir, coin.addnode)
+            logging.info("Uploaded {}".format(coin.scripts["local_path"]+coin.scripts["upgrade"]))
+            result = self.connection.run(cmd, hide=False)
+
+            logging.info("Done executing: ".format(result.stdout))
+            success = "success: result.stdout: {}".format(result.stdout)
+            return success
         except UnexpectedExit as e:
-             logging.info("Could not upload daemon bin")
+             logging.warning("Problem upgrading", exc_info=e)
              return '{"status":"failed"}'
         except Exception as e:
-            return '{"status":"failed"}'
+             logging.warning("Could not upload daemon bin: ".format(e), exc_info=e)
+             return '{"status":"failed"}'
 
     '''
     '''
@@ -172,6 +177,20 @@ class VPS:
             return '{"status":"restart"}'
         except Exception as e:
             logging.error('Could not do action on daemon at {}'.format(self.getIP()))
+
+    def kill_daemon(self,coin):
+        try:
+            kill ="{}/{} --datadir={} stop".format(self.installed_folder, coin.cli, self.wallet_directory)
+            result = self.connection.run(kill, hide=False)
+            return result.stdout
+        except UnexpectedExit as e:
+            #possibly try to start  the daemon again
+            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
+            return '{"status":"restart"}'
+        except Exception as e:
+            logging.error('Could not do action on daemon at {}'.format(self.getIP()))
+            return '{"status":"restart"}'
+
 
     def daemon_action(self, coin, reindex = 0):
         try:
