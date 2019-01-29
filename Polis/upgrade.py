@@ -2,6 +2,9 @@ import logging
 import time
 import sys
 import json
+import string
+import secrets
+import re
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit
 import argparse
@@ -22,7 +25,7 @@ def is_vps_installed(connection):
         result = connection.run('dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev|grep -c "install ok installed"', hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
-        if result == 1 :
+        if result.stdout == '1\n' :
             is_installed = True
     except UnexpectedExit:
         logging.info('{} does not exist !'.format(dir))
@@ -57,6 +60,11 @@ def install_vps(connection):
     except Exception as e:
         logging.error('Could not install vps', exc_info=e)
 
+def get_ip_from_connection_string(str) :
+    ip = re.compile('(([2][5][0-5]\.)|([2][0-4][0-9]\.)|([0-1]?[0-9]?[0-9]\.)){3}'
+                +'(([2][5][0-5])|([2][0-4][0-9])|([0-1]?[0-9]?[0-9]))')
+    match = ip.search(str)
+    return match.group()
 
 '''
 
@@ -129,18 +137,33 @@ def transfer_new_version(connection, dir, sourceFolder, versionToUpload):
 '''
 
 '''
-def create_wallet_dir(connection, wallet_dir):
-    resources_to_delete = ["chainstate", "blocks", "peers.dat"]
-    to_delete_str = " ".join(wallet_dir + str(x) for x in resources_to_delete)
-    try:
-        if wallet_dir == "" :
-            raise Exception('Missing wallet directory')
-        conx_str = 'rm -rf {}'.format(to_delete_str)
-        result = connection.run(conx_str, hide=True)
+def create_wallet_dir(connection, wallet_dir, PUBLICIP, PRIVATEKEY):
+    exists = is_directory_exists(connection, dir)
+    if not exists:
+        result = connection.run('mkdir -p {}'.format(dir), hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
-    except UnexpectedExit as e :
-        logging.error('Could not delete : {}'.format(to_delete_str), exc_info=e)
+        # Transfer the inflated to file to the target
+        result = connection.put('./polis.conf', dir)
+        msg = "Transfered {0} to {1}"
+        logging.debug(msg.format('./polis.conf', connection))
+        # Setup the config file
+        polis_conf = dir + 'polis.conf'
+        RPCUSER = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
+        result = connection.run('sed - i \'s/<RPCUSER>/{}/g\' {}'.format(RPCUSER, polis_conf), hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        RPCPASSWORD = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
+        result = connection.run('sed - i \'s/<RPCPASSWORD>/{}/g\' {}'.format(RPCPASSWORD, polis_conf), hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run('sed - i \'s/<PUBLICIP>/{}/g\' {}'.format(PUBLICIP, polis_conf), hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run('sed - i \'s/<PRIVATEKEY>/{}/g\' {}'.format(PRIVATEKEY, polis_conf), hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+    return exists
 
 
 '''
@@ -217,19 +240,23 @@ def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False, use_reind
 '''
 
 '''
-def reindex_masternode(connection, target_directory, cnx) :
+def reindex_masternode(connection, target_directory, cnx):
+    global default_wallet_dir
+    global default_wallet_conf_file
     # Stop the daemon if running
     stop_daemon(connection, target_directory)
 
     wallet_dirs = []
+
     use_wallet_dir = False
 
     if "wallet_directories" in cnx:
         for wallet in cnx["wallet_directories"]:
             wallet_dirs.append(wallet["wallet_directory"])
         use_wallet_dir = True
+
     else:
-        wallet_dirs = [default_wallet_dir]
+        wallet_dirs = [ default_wallet_dir ]
 
     for wallet_dir in wallet_dirs:
         wallet_conf_file = wallet_dir + default_wallet_conf_file
@@ -255,15 +282,17 @@ def init():
 
 '''
 def main():
+    global default_wallet_dir
+    global default_wallet_conf_file
     init()
 
     # CLI arguments
     parser = argparse.ArgumentParser(description='Masternodes upgrade script')
     parser.add_argument('--config', nargs='?', default="config.json", help='config file in Json format')
-    parser.add_argument('-cleanConfig', action='store_false', help='clean up to config files')
-    parser.add_argument('-addNodes', action='store_false', help='edit the config file to add addnode entries')
-    parser.add_argument('-onlyReindex', action='store_false', help='only reindex the masternodes')
-    parser.add_argument('-onlyInstallVPS', action='store_false', help='only install the VPSs')
+    parser.add_argument('-cleanConfig', action='store_true', help='clean up to config files')
+    parser.add_argument('-addNodes', action='store_true', help='edit the config file to add addnode entries')
+    parser.add_argument('-onlyReindex', action='store_true', help='only reindex the masternodes')
+    parser.add_argument('-onlyInstallVPS', action='store_true', help='only install the VPSs')
     args = parser.parse_args()
 
     # Load configuration file
@@ -328,7 +357,7 @@ def main():
                     wallet_conf_file = wallet_dir+default_wallet_conf_file
 
                     if not is_directory_exists(connection, wallet_dir) :
-
+                        create_wallet_dir(connection, wallet_dir, get_ip_from_connection_string(cnx["connection_string"]), cnx["private_key"])
 
                     # Clean up old wallet dir
                     clean_up_wallet_dir(connection, wallet_dir)
@@ -340,7 +369,6 @@ def main():
                         add_addnode(connection, wallet_conf_file)
                     # Start the new daemon
                     start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
-
 
                 logging.info('{} Has been successfully upgraded'.format(cnx["connection_string"]))
 
