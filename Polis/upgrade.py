@@ -18,6 +18,7 @@ default_wallet_conf_file = ""
 def is_vps_installed(connection):
     is_installed = False
     try:
+        # Search for libdb4.8-dev package,
         result = connection.run('dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev|grep -c "install ok installed"', hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
@@ -28,7 +29,8 @@ def is_vps_installed(connection):
     return is_installed
 
 '''
-    BUG : Must be in root !
+    BUG : Must be logged in root ! 
+    TODO : add an interactive shell to ask user for credentials
 '''
 def install_vps(connection):
     try:
@@ -123,6 +125,23 @@ def transfer_new_version(connection, dir, sourceFolder, versionToUpload):
         logging.info(msg.format(result))
     except Exception as e :
         logging.error('Could not deploy : {}'.format(versionToUpload), exc_info=e)
+
+'''
+
+'''
+def create_wallet_dir(connection, wallet_dir):
+    resources_to_delete = ["chainstate", "blocks", "peers.dat"]
+    to_delete_str = " ".join(wallet_dir + str(x) for x in resources_to_delete)
+    try:
+        if wallet_dir == "" :
+            raise Exception('Missing wallet directory')
+        conx_str = 'rm -rf {}'.format(to_delete_str)
+        result = connection.run(conx_str, hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+    except UnexpectedExit as e :
+        logging.error('Could not delete : {}'.format(to_delete_str), exc_info=e)
+
 
 '''
 
@@ -244,6 +263,7 @@ def main():
     parser.add_argument('-cleanConfig', action='store_false', help='clean up to config files')
     parser.add_argument('-addNodes', action='store_false', help='edit the config file to add addnode entries')
     parser.add_argument('-onlyReindex', action='store_false', help='only reindex the masternodes')
+    parser.add_argument('-onlyInstallVPS', action='store_false', help='only install the VPSs')
     args = parser.parse_args()
 
     # Load configuration file
@@ -271,7 +291,14 @@ def main():
 
             if args.onlyReindex :
                 reindex_masternode(connection, target_directory, cnx)
-                logging.info('{} Has been  successfully reindexed'.format(cnx["connection_string"]))
+                logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
+
+            elif args.onlyInstallVPS :
+                if not is_vps_installed(connection) :
+                    install_vps(connection)
+                    logging.info('{} Has been successfully installed'.format(cnx["connection_string"]))
+                else:
+                    logging.info('{} Already installed'.format(cnx["connection_string"]))
 
             else:
                 # Install VPS
@@ -300,6 +327,9 @@ def main():
                 for wallet_dir in wallet_dirs:
                     wallet_conf_file = wallet_dir+default_wallet_conf_file
 
+                    if not is_directory_exists(connection, wallet_dir) :
+
+
                     # Clean up old wallet dir
                     clean_up_wallet_dir(connection, wallet_dir)
                     # Clean up the config file
@@ -312,7 +342,7 @@ def main():
                     start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
 
 
-                logging.info('{} Has been  successfully upgraded'.format(cnx["connection_string"]))
+                logging.info('{} Has been successfully upgraded'.format(cnx["connection_string"]))
 
         except Exception as e:
             logging.error('Could not upgrade {}'.format(cnx["connection_string"]), exc_info=e)
