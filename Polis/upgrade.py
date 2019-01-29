@@ -161,6 +161,21 @@ def clean_up_config(connection, wallet_config_file, option):
     except UnexpectedExit as e :
         logging.error('Could not clean up : {}'.format(wallet_config_file), exc_info=e)
 
+'''
+
+'''
+def add_addnode(connection, wallet_config_file):
+    try:
+        if wallet_config_file == "" :
+            raise Exception('Missing wallet configuration file')
+
+        cmd = "echo \"addnode=insight.polispay.org:24126\naddnode=explorer.polispay.org:24126\" >> {}".format(wallet_config_file)
+
+        result = connection.run(cmd, hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+    except UnexpectedExit as e :
+        logging.error('Could not add addnode : {}'.format(wallet_config_file), exc_info=e)
 
 
 '''
@@ -227,7 +242,8 @@ def main():
     parser = argparse.ArgumentParser(description='Masternodes upgrade script')
     parser.add_argument('--config', nargs='?', default="config.json", help='config file in Json format')
     parser.add_argument('-cleanConfig', action='store_false', help='clean up to config files')
-    parser.add_argument('-onlyReindex', action='store_false', help='clean up to config files')
+    parser.add_argument('-addNodes', action='store_false', help='edit the config file to add addnode entries')
+    parser.add_argument('-onlyReindex', action='store_false', help='only reindex the masternodes')
     args = parser.parse_args()
 
     # Load configuration file
@@ -289,6 +305,9 @@ def main():
                     # Clean up the config file
                     if args.cleanConfig :
                         clean_up_config(connection, wallet_conf_file, "clear addnode")
+                    # Add addnode in the config file
+                    if args.addNodes :
+                        add_addnode(connection, wallet_conf_file)
                     # Start the new daemon
                     start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
 
