@@ -1,4 +1,4 @@
-import json
+import json, time
 from klein import Klein
 from twisted.web.static import File
 from twisted.internet.defer import succeed
@@ -83,11 +83,15 @@ with app.subroute("/daemon") as daemon:
     '''
     @daemon.route('/launch', methods=['GET'])
     def daemon_masternode_start(request):
-        mn_idx = int(request.args.get(b'mn')[0])
-        reinndex = int(request.args.get(b'reinndex')[0])
+        mn_idx = int(request.args.get(b'mnidx', [0])[0])
+        reindex = int(request.args.get(b'reindex', [0])[0])
         coin = Polis(config['Polis'])
 
-        result = VPS(config["masternodes"][mn_idx],coin).daemon_action(coin, reinndex)
+        vps = VPS(config["masternodes"][mn_idx], coin)
+        result = vps.kill_daemon(coin)
+        time.sleep(10)
+        logging.info("Killed daemon {}".format(result))
+        result = vps.daemon_action(coin, reindex)
         logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
         return result
 
@@ -215,7 +219,8 @@ def upgrade(request):
     coin = Polis(config["Polis"])
     vps = VPS(config["masternodes"][mnidx], coin)
 
-    result = vps.upgrade()
+    logging.info("vps.upgrade called ! for: {}".format(vps.getIP()))
+    result = vps.upgrade(coin)
     return result
 
 

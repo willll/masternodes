@@ -196,7 +196,7 @@ class VPS:
         try:
             cmd = "{}/{} --datadir={}".format(self.installed_folder, coin.daemon, self.wallet_directory)
             if reindex == 1:
-                cmd += " --reindex"
+                cmd += " -reindex"
             result = self.connection.run(cmd, hide=False)
             logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
             return result.stdout

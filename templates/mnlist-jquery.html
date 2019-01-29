@@ -64,7 +64,7 @@
         <th scope="col">ID</th>
         <th scope="col">Actions</th>
         <th scope="col"></th>
-        <th scope="col">Info</th>
+        <th scope="col">Info <span id="bh" > </span></th>
         <th scope="col">Status</th>
     </tr>
     </thead>
@@ -80,6 +80,7 @@
                 <option id='update_{{ item.idx }}'>Update status</option>
                 <option id='restart_{{ item.idx }}'>Restart</option>
                 <option id='reindex_{{ item.idx }}'>Reindex</option>
+                <option id='upgrade_{{ item.idx }}'>upgrade mn</option>
             </select>
         </td>
         <td>
@@ -131,6 +132,19 @@
         });
       });
     });
+
+
+    /* CROSS SITE JS:
+    block heihgt */
+
+    function getBlockHeight(){
+        $.getJSON("https://insight.polispay.org/api/blocks",{limit:1},function(data){
+            console.log(JSON.stringify(data))
+            console.log(data.blocks[0].height)
+            $("#bh").append(data.blocks[0].height)
+            }
+        )
+    }
     function installScript(id)
     {
       mnidx = id.attr("id").split("_").pop()
@@ -185,13 +199,23 @@
         })
     }
 
+    function upgradeMN(id)
+    {
+      mnidx = id.split("_").pop();
+      console.log("UpgradedMN : "+ mnidx );
+      $("#row_"+mnidx).children('td, th').css('background-color','orange');
+      $.getJSON('/upgrade', { mnidx: mnidx }, function(data) {
+          $("#row_"+mnidx).children('td, th').css('background-color','blue');
+          $("Done upgrading!: "+ JSON.stringify(data))
+      });
+    }
     function restartMN(id, reindex)
     {
       mnidx = id.split("_").pop();
       console.log("restarting: "+ mnidx);
       $("#row_"+mnidx).children('td, th').css('background-color','orange');
       $.getJSON('/daemon/launch', { mnidx: mnidx, reindex : reindex }, function(data) {
-          console.log("Restarting MN : "+ mnidx + + " " + reindex? "and reindexing it ": "" );
+          console.log("Restarting MN : "+ mnidx + " " + reindex? "and reindexing it ": "" );
       });
     }
 
@@ -253,6 +277,13 @@
                     restartMN(id, 1);
                 })
             }
+            else if (id.match("^upgrade")) {
+                console.log("Upgrading : "+ id);
+                riskyAction("upgrading masternode could take a while, and might put you out of position", function(){
+                    console.log("updating!!!!!")
+                    upgradeMN(id);
+                })
+            }
         } catch(err) {
             console.log("Error while taking action for : "+ id + "("+ err + ")");
         }
@@ -287,6 +318,7 @@
   $( document ).ready(function() {
       console.log("Document ready")
       updateAll();
+      getBlockHeight();
 
     });
 
