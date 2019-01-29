@@ -42,10 +42,12 @@ class VPS:
             logging.error('Could not close connection')
             return 'failed to close connection'
 
-    def actions(self, action):
+    def actions(self, action, coin):
         try:
             # list of actions that are accepted
-            actions = {'clean_wallet':'', 'kill_daemon':'', 'view_crontab':'crontab -l', 'ps':'ps -ef'}
+            actions = {'clean_wallet':'rm -rf {}/{{blocks,peers.dat,chainstate}}'.format(coin.default_wallet_dir),
+                       'kill_daemon':'killall -9 {}'.format(coin.daemon),
+                       'view_crontab':'crontab -l', 'ps':'ps -ef'}
 
             result = self.connection.run(actions[action], hide=False)
 
@@ -128,9 +130,9 @@ class VPS:
         try:
             self.connection.put(coin.scripts["local_path"]+coin.scripts["watcher_cron"])
             logging.info('Uploaded watcher_cron.sh')
-            result = self.connection.run("/bin/bash {} {} {} {}".format(
-                coin.scripts["watcher_cron"], coin.name, coin.default_dir, coin.daemon,
-                self.wallet_directory), hide=False)
+            cmd = "/bin/bash {} {} {} {} {}".format(coin.scripts["watcher_cron"], coin.name, coin.default_dir, coin.daemon,
+                                                 coin.default_wallet_dir)
+            result = self.connection.run(cmd, hide=False)
             if result.stdout == '' and result.stderr == '':
                 return "{'status':'success'}"
 
@@ -141,7 +143,6 @@ class VPS:
         except Exception as e:
             logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e), exc_info=e)
             return '{"status":"failed"}'
-
 
     def install_sentinel(self, coin):
         try:

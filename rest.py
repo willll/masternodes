@@ -110,7 +110,7 @@ with app.subroute("/scripts") as scripts:
     @scripts.route('/watcher', methods=['GET'])
     def watcher_install(request):
         mnidx = int(request.args.get(b'mnidx',[0])[0])
-        return VPS(config["masternodes"][mnidx],Polis(config['Polis'])).install_watcher(Polis(config["Polis"]))
+        return VPS(config["masternodes"][mnidx], Polis(config['Polis'])).install_watcher(Polis(config["Polis"]))
 
 
 '''
@@ -254,7 +254,7 @@ with app.subroute("/sys") as sys:
         mnidx = int(request.args.get(b'mnidx', [0])[0])
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
-        result = {"result": vps.actions("view_crontab").splitlines()}
+        result = {"result": vps.actions("view_crontab", coin).splitlines()}
         logging.info("Crontab requested got:\n{}".format(result))
 
         return json.dumps(result)
@@ -265,7 +265,8 @@ with app.subroute("/sys") as sys:
     @sys.route('/ps')
     def ps(request):
         mnidx = int(request.args.get(b'mnidx', [0])[0])
-        return returnValue(json.dumps({"result": VPS(config["masternodes"][mnidx], Polis(config["Polis"])).actions("ps").splitlines()}))
+        coin = Polis(config["Polis"])
+        return returnValue(json.dumps({"result": VPS(config["masternodes"][mnidx], coin).actions("ps", coin).splitlines()}))
 
 '''
 Sub routes pertaining to polis-cli actions
