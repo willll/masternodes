@@ -16,16 +16,16 @@ default_wallet_conf_file = ""
 
 '''
 def is_vps_installed(connection):
-    isInstalled = False
+    is_installed = False
     try:
         result = connection.run('dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev|grep -c "install ok installed"', hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         if result == 1 :
-            isInstalled = True;
+            is_installed = True
     except UnexpectedExit:
         logging.info('{} does not exist !'.format(dir))
-    return isInstalled
+    return is_installed
 
 '''
     BUG : Must be in root !
@@ -52,8 +52,8 @@ def install_vps(connection):
             result = connection.run('{}'.format(cmd), hide=True)
             msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
             logging.info(msg.format(result))
-        except Exception as e:
-            logging.error('Could not install vps', exc_info=e)
+    except Exception as e:
+        logging.error('Could not install vps', exc_info=e)
 
 
 '''
@@ -166,10 +166,12 @@ def clean_up_config(connection, wallet_config_file, option):
 '''
 
 '''
-def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False):
+def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False, use_reindex=False):
     # Restart the daemon
     try:
-        conx_str = '{}/polisd -daemon -reindex'.format(dir)
+        conx_str = '{}/polisd -daemon'.format(dir)
+        if use_reindex:
+            conx_str += ' -reindex'
         if wallet_dir != "" and use_wallet_dir :
             conx_str += " --datadir=" + wallet_dir
         result = connection.run(conx_str, hide=True)
@@ -177,6 +179,30 @@ def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False):
         logging.info(msg.format(result))
     except Exception as e :
         logging.error('Could not start  : {}'.format('polisd'), exc_info=e)
+
+'''
+
+'''
+def reindex_masternode(connection, target_directory, cnx) :
+    # Stop the daemon if running
+    stop_daemon(connection, target_directory)
+
+    wallet_dirs = []
+    use_wallet_dir = False
+
+    if "wallet_directories" in cnx:
+        for wallet in cnx["wallet_directories"]:
+            wallet_dirs.append(wallet["wallet_directory"])
+        use_wallet_dir = True
+    else:
+        wallet_dirs = [default_wallet_dir]
+
+    for wallet_dir in wallet_dirs:
+        wallet_conf_file = wallet_dir + default_wallet_conf_file
+        # Clean up old wallet dir
+        clean_up_wallet_dir(connection, wallet_dir)
+        # Start the new daemon
+        start_daemon(connection, target_directory, wallet_dir, use_wallet_dir, True)
 
 '''
 
@@ -201,6 +227,7 @@ def main():
     parser = argparse.ArgumentParser(description='Masternodes upgrade script')
     parser.add_argument('--config', nargs='?', default="config.json", help='config file in Json format')
     parser.add_argument('-cleanConfig', action='store_false', help='clean up to config files')
+    parser.add_argument('-onlyReindex', action='store_false', help='clean up to config files')
     args = parser.parse_args()
 
     # Load configuration file
@@ -226,42 +253,47 @@ def main():
 
             target_directory = cnx["destination_folder"]
 
-            # Install VPS
-            if not is_vps_installed() :
+            if args.onlyReindex :
+                reindex_masternode(connection, target_directory, cnx)
+                logging.info('{} Has been  successfully reindexed'.format(cnx["connection_string"]))
 
-
-            # Create directory if does not exist
-            create_polis_directory(connection, target_directory)
-
-            # Stop the daemon if running
-            stop_daemon(connection, target_directory)
-
-            # Transfer File to remote directory
-            transfer_new_version(connection, target_directory, config["SourceFolder"], config["VersionToUpload"])
-
-            wallet_dirs = []
-            use_wallet_dir = False
-
-            if "wallet_directories" in cnx :
-                for wallet in cnx["wallet_directories"]:
-                    wallet_dirs.append( wallet["wallet_directory"] )
-                use_wallet_dir = True
             else:
-                wallet_dirs = [ default_wallet_dir ]
+                # Install VPS
+                if not is_vps_installed(connection) :
+                    install_vps(connection)
 
-            for wallet_dir in wallet_dirs:
-                wallet_conf_file = wallet_dir+default_wallet_conf_file
+                # Create directory if does not exist
+                create_polis_directory(connection, target_directory)
 
-                # Clean up old wallet dir
-                clean_up_wallet_dir(connection, wallet_dir)
-                # Clean up the config file
-                if args.cleanConfig :
-                    clean_up_config(connection, wallet_conf_file, "clear addnode")
-                # Start the new daemon
-                start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
+                # Stop the daemon if running
+                stop_daemon(connection, target_directory)
+
+                # Transfer File to remote directory
+                transfer_new_version(connection, target_directory, config["SourceFolder"], config["VersionToUpload"])
+
+                wallet_dirs = []
+                use_wallet_dir = False
+
+                if "wallet_directories" in cnx :
+                    for wallet in cnx["wallet_directories"]:
+                        wallet_dirs.append( wallet["wallet_directory"] )
+                    use_wallet_dir = True
+                else:
+                    wallet_dirs = [ default_wallet_dir ]
+
+                for wallet_dir in wallet_dirs:
+                    wallet_conf_file = wallet_dir+default_wallet_conf_file
+
+                    # Clean up old wallet dir
+                    clean_up_wallet_dir(connection, wallet_dir)
+                    # Clean up the config file
+                    if args.cleanConfig :
+                        clean_up_config(connection, wallet_conf_file, "clear addnode")
+                    # Start the new daemon
+                    start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
 
 
-            logging.info('{} Has been  successfully upgraded'.format(cnx["connection_string"]))
+                logging.info('{} Has been  successfully upgraded'.format(cnx["connection_string"]))
 
         except Exception as e:
             logging.error('Could not upgrade {}'.format(cnx["connection_string"]), exc_info=e)
