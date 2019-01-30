@@ -64,7 +64,7 @@
         <th scope="col">ID</th>
         <th scope="col">Actions</th>
         <th scope="col"></th>
-        <th scope="col">Info</th>
+        <th scope="col">Info <span id="bh" > </span></th>
         <th scope="col">Status</th>
     </tr>
     </thead>
@@ -80,6 +80,7 @@
                 <option id='update_{{ item.idx }}'>Update status</option>
                 <option id='restart_{{ item.idx }}'>Restart</option>
                 <option id='reindex_{{ item.idx }}'>Reindex</option>
+                <option id='upgrade_{{ item.idx }}'>upgrade mn</option>
             </select>
         </td>
         <td>
@@ -118,6 +119,8 @@
 </div>
 
 <script type=text/javascript>
+
+var BLOCKHEIGHT = 0
     /*
         Filtering select code:
         https://www.w3schools.com/bootstrap/tryit.asp?filename=trybs_filters_table&stacked=h
@@ -131,9 +134,27 @@
         });
       });
     });
+
+
+    /* CROSS SITE JS:
+    block heihgt */
+
+    function getBlockHeight( print ){
+        $.getJSON("https://insight.polispay.org/api/blocks",{limit:1},function(data){
+            console.log(JSON.stringify(data))
+            console.log(data.blocks[0].height)
+            if(print)
+            {
+                $("#bh").append(data.blocks[0].height)
+            }
+            if(BLOCKHEIGHT!=data.blocks[0].height) {
+                BLOCKHEIGHT=data.blocks[0].height
+            }
+        })
+    }
     function installScript(id)
     {
-      mnidx = id.attr("id").split("_").pop()
+      mnidx = id.split("_").pop()
       console.log("Installing watcher for: "+ id); 
       $.getJSON('/scripts/watcher', { mnidx: mnidx}, function(data) {
           console.log("Installing watcher for: "+ mnidx ); 
@@ -143,16 +164,17 @@
 
     function updateStatus(mn_status)
     {
-      mn_status.text('Updating...')
-      $.getJSON('/mns/cli/masternode/status', { mnidx: mn_status.attr("id").split("_").pop()}, function(data) {
-          mnidx = mn_status.attr("id").split("_").pop()
+      $('#'+mn_status).text('Updating...')
+      $.getJSON('/mns/cli/masternode/status', { mnidx: mn_status.split("_").pop()}, function(data) {
+          mnidx = mn_status.split("_").pop()
+          mn_status = $('#'+mn_status)
           console.log(data)
           console.log("Loading details for mn; "+ mnidx);
 
           if(data.status.startsWith("restart"))
           {
-              mn_status.text("Stopped, Restart mn daemon:")
-              mn_status.append("<a href='/daemon/launch?mn="+mnidx+"&reinndex=0'>start polisd</a>");
+              mn_status.html("Stopped, Restart mn daemon:<br>"+
+                            "<a href='/daemon/launch?mn="+mnidx+"&reinndex=0'>start polisd</a>");
           }
           else if(data.status.startsWith("error")) {
               mn_status.text("VPS OFF");
@@ -185,13 +207,23 @@
         })
     }
 
+    function upgradeMN(id)
+    {
+      mnidx = id.split("_").pop();
+      console.log("UpgradedMN : "+ mnidx );
+      $("#row_"+mnidx).children('td, th').css('background-color','orange');
+      $.getJSON('/upgrade', { mnidx: mnidx }, function(data) {
+          $("#row_"+mnidx).children('td, th').css('background-color','blue');
+          $("Done upgrading!: "+ JSON.stringify(data))
+      });
+    }
     function restartMN(id, reindex)
     {
       mnidx = id.split("_").pop();
       console.log("restarting: "+ mnidx);
       $("#row_"+mnidx).children('td, th').css('background-color','orange');
       $.getJSON('/daemon/launch', { mnidx: mnidx, reindex : reindex }, function(data) {
-          console.log("Restarting MN : "+ mnidx + + " " + reindex? "and reindexing it ": "" );
+          console.log("Restarting MN : "+ mnidx + " " + reindex? "and reindexing it ": "" );
       });
     }
 
@@ -199,9 +231,22 @@
     {
         getinfo_cell = $("#display_getinfo_"+id)
         $.getJSON('/mns/cli/action', { mnidx: id, actidx: 'gi' }, function(data) {
-            getinfo_cell.append("Block: "+data.blocks+ "<br>v"+data.version)
+            getinfo_cell.html("Block: "+data.blocks+ "<br>v"+data.version)
             console.log("getinfo: "+JSON.stringify(data))
             $("#output").append(JSON.stringify(data));
+            getBlockHeight( 0 )
+            if(data.blocks > BLOCKHEIGHT)
+            {
+              $("#row_"+id).children('td, th').css('background-color','darkblue');
+            }
+            else if(data.blocks == BLOCKHEIGHT)
+            {
+              $("#row_"+id).children('td, th').css('background-color','blue');
+            }
+            else
+            {
+              $("#row_"+id).children('td, th').css('background-color','pink');
+            }
         });
     }
     function updateAll()
@@ -209,13 +254,13 @@
         $(".status").each(function(){
             var mn_status = $(this);
             console.log("Filling up masternodes table"+ mn_status.attr("id"));
-            updateStatus(mn_status)
+            updateStatus(mn_status.attr("id"))
         });
     }
     $('.update').bind('click', function() {
         var id = '#status_'+$(this).attr('id') 
         console.log("Updating status for : div"+ id); 
-        updateStatus($(id)) 
+        updateStatus(id)
     });
     $('.upodateAll').bind('click', function() {
         console.log("Update all" );
@@ -229,18 +274,18 @@
     $('.install').bind('click', function(){ 
         var id = "#status_"+$(this).attr('id').split("_")[1] 
         console.log("Clicked :"+id)
-        installScript($(id))
+        installScript(id)
     });
     $('.action').bind('change', function(){
         var id = $(this).find(':selected')[0].id;
         try {
             if (id.match("^install_")) {
                 console.log("Installing  :"+id)
-                installScript($(id));
+                installScript(id);
             }
             else if (id.match("^update_")) {
                 console.log("Updating status : "+ id);
-                updateStatus($(id));
+                updateStatus(id);
             }
             else if (id.match("^restart_")) {
                 console.log("Restarting mn :"+ id);
@@ -251,6 +296,13 @@
                 riskyAction("Reindexing masternode could take a while, and might put you out of position", function(){
                     console.log("Reindexing!!!!!")
                     restartMN(id, 1);
+                })
+            }
+            else if (id.match("^upgrade")) {
+                console.log("Upgrading : "+ id);
+                riskyAction("upgrading masternode could take a while, and might put you out of position", function(){
+                    console.log("updating!!!!!")
+                    upgradeMN(id);
                 })
             }
         } catch(err) {
@@ -287,6 +339,7 @@
   $( document ).ready(function() {
       console.log("Document ready")
       updateAll();
+      getBlockHeight(1);
 
     });
 

@@ -1,7 +1,9 @@
 
+
 class Coin:
     def __init__(self, name):
         self.name = name
+
 
 
 class Polis(Coin):
@@ -16,7 +18,9 @@ class Polis(Coin):
         self.cli = config["cli"]
         self.daemon = config["daemon"]
         self.vps = config["vps"]
+        self.addnode= config["addnode"]
         if "sentinel_git" in config :
             self.sentinel_git = config["sentinel_git"]
         else:
             self.sentinel_git = ""
+

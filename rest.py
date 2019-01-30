@@ -1,4 +1,4 @@
-import json
+import json, time
 from klein import Klein
 from twisted.web.static import File
 from twisted.internet.defer import succeed
@@ -83,11 +83,15 @@ with app.subroute("/daemon") as daemon:
     '''
     @daemon.route('/launch', methods=['GET'])
     def daemon_masternode_start(request):
-        mn_idx = int(request.args.get(b'mn')[0])
-        reinndex = int(request.args.get(b'reinndex')[0])
+        mn_idx = int(request.args.get(b'mnidx', [0])[0])
+        reindex = int(request.args.get(b'reindex', [0])[0])
         coin = Polis(config['Polis'])
 
-        result = VPS(config["masternodes"][mn_idx],coin).daemon_action(coin, reinndex)
+        vps = VPS(config["masternodes"][mn_idx], coin)
+        result = vps.kill_daemon(coin)
+        time.sleep(10)
+        logging.info("Killed daemon {}".format(result))
+        result = vps.daemon_action(coin, reindex)
         logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
         return result
 
@@ -106,7 +110,7 @@ with app.subroute("/scripts") as scripts:
     @scripts.route('/watcher', methods=['GET'])
     def watcher_install(request):
         mnidx = int(request.args.get(b'mnidx',[0])[0])
-        return VPS(config["masternodes"][mnidx],Polis(config['Polis'])).install_watcher(Polis(config["Polis"]))
+        return VPS(config["masternodes"][mnidx], Polis(config['Polis'])).install_watcher(Polis(config["Polis"]))
 
 
 '''
@@ -215,7 +219,8 @@ def upgrade(request):
     coin = Polis(config["Polis"])
     vps = VPS(config["masternodes"][mnidx], coin)
 
-    result = vps.upgrade()
+    logging.info("vps.upgrade called ! for: {}".format(vps.getIP()))
+    result = vps.upgrade(coin)
     return result
 
 
@@ -249,7 +254,7 @@ with app.subroute("/sys") as sys:
         mnidx = int(request.args.get(b'mnidx', [0])[0])
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
-        result = {"result": vps.actions("view_crontab").splitlines()}
+        result = {"result": vps.actions("view_crontab", coin).splitlines()}
         logging.info("Crontab requested got:\n{}".format(result))
 
         return json.dumps(result)
@@ -260,7 +265,8 @@ with app.subroute("/sys") as sys:
     @sys.route('/ps')
     def ps(request):
         mnidx = int(request.args.get(b'mnidx', [0])[0])
-        return returnValue(json.dumps({"result": VPS(config["masternodes"][mnidx], Polis(config["Polis"])).actions("ps").splitlines()}))
+        coin = Polis(config["Polis"])
+        return returnValue(json.dumps({"result": VPS(config["masternodes"][mnidx], coin).actions("ps", coin).splitlines()}))
 
 '''
 Sub routes pertaining to polis-cli actions

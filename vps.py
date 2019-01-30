@@ -42,10 +42,12 @@ class VPS:
             logging.error('Could not close connection')
             return 'failed to close connection'
 
-    def actions(self, action):
+    def actions(self, action, coin):
         try:
             # list of actions that are accepted
-            actions = {'clean_wallet':'', 'kill_daemon':'', 'view_crontab':'crontab -l', 'ps':'ps -ef'}
+            actions = {'clean_wallet':'rm -rf {}/{{blocks,peers.dat,chainstate}}'.format(coin.default_wallet_dir),
+                       'kill_daemon':'killall -9 {}'.format(coin.daemon),
+                       'view_crontab':'crontab -l', 'ps':'ps -ef'}
 
             result = self.connection.run(actions[action], hide=False)
 
@@ -69,17 +71,22 @@ class VPS:
 
     def upgrade(self, coin):
         try:
-            result = self.connection.put(coin.version_to_upload)
-            result = self.connection.put(coin.scripts["local_path"]+coin.scripts["upgrade"])
-            self.connection.run("/bin/bash {} {} {} {} {}".format(coin.scripts["upgrade"], coin.cli,
-                                                                  coin.installed_folder, coin.daemon,
-                                                                  coin.wallet_directory))
-            return result.stdout
+            self.connection.put("Polis/"+coin.version_to_upload)
+            logging.info("Uploaded {}".format(coin.version_to_upload))
+            self.connection.put(coin.scripts["local_path"]+coin.scripts["upgrade"])
+            cmd = "/bin/bash {} {} {} {} {} \"{}\"".format(coin.scripts["upgrade"], coin.cli, coin.default_dir, coin.daemon, coin.default_wallet_dir, coin.addnode)
+            logging.info("Uploaded {}".format(coin.scripts["local_path"]+coin.scripts["upgrade"]))
+            result = self.connection.run(cmd, hide=False)
+
+            logging.info("Done executing: ".format(result.stdout))
+            success = "success: result.stdout: {}".format(result.stdout)
+            return success
         except UnexpectedExit as e:
-             logging.info("Could not upload daemon bin")
+             logging.warning("Problem upgrading", exc_info=e)
              return '{"status":"failed"}'
         except Exception as e:
-            return '{"status":"failed"}'
+             logging.warning("Could not upload daemon bin: ".format(e), exc_info=e)
+             return '{"status":"failed"}'
 
     '''
     '''
@@ -123,9 +130,9 @@ class VPS:
         try:
             self.connection.put(coin.scripts["local_path"]+coin.scripts["watcher_cron"])
             logging.info('Uploaded watcher_cron.sh')
-            result = self.connection.run("/bin/bash {} {} {} {}".format(
-                coin.scripts["watcher_cron"], coin.name, coin.default_dir, coin.daemon,
-                self.wallet_directory), hide=False)
+            cmd = "/bin/bash {} {} {} {} {}".format(coin.scripts["watcher_cron"], coin.name, coin.default_dir, coin.daemon,
+                                                 coin.default_wallet_dir)
+            result = self.connection.run(cmd, hide=False)
             if result.stdout == '' and result.stderr == '':
                 return "{'status':'success'}"
 
@@ -136,7 +143,6 @@ class VPS:
         except Exception as e:
             logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e), exc_info=e)
             return '{"status":"failed"}'
-
 
     def install_sentinel(self, coin):
         try:
@@ -173,11 +179,25 @@ class VPS:
         except Exception as e:
             logging.error('Could not do action on daemon at {}'.format(self.getIP()))
 
+    def kill_daemon(self,coin):
+        try:
+            kill ="{}/{} --datadir={} stop".format(self.installed_folder, coin.cli, self.wallet_directory)
+            result = self.connection.run(kill, hide=False)
+            return result.stdout
+        except UnexpectedExit as e:
+            #possibly try to start  the daemon again
+            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
+            return '{"status":"restart"}'
+        except Exception as e:
+            logging.error('Could not do action on daemon at {}'.format(self.getIP()))
+            return '{"status":"restart"}'
+
+
     def daemon_action(self, coin, reindex = 0):
         try:
             cmd = "{}/{} --datadir={}".format(self.installed_folder, coin.daemon, self.wallet_directory)
             if reindex == 1:
-                cmd += " --reindex"
+                cmd += " -reindex"
             result = self.connection.run(cmd, hide=False)
             logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
             return result.stdout
