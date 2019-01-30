@@ -156,23 +156,22 @@ TODO:
     generate priv key, install sentinel and crontab job, install
     sscript to watch daemon every minute and relaunch it
 '''
-@app.route('/create',methods=['POST', 'GET'])
+@app.route('/create', methods=['POST', 'GET'])
 def create(request):
-    if request.method == "POST":
-        password =str(request.args.get(b'password', [0])[0])
-        ip =str(request.args.get(b'ip', [0])[0])
-        port =int(request.args.get(b'port', [0])[0])
-        name =str(request.args.get(b'name', [0])[0])
+    if request.method == b'POST':
+        password =(request.args.get(b'password', [0])[0]).decode()
+        ip =(request.args.get(b'ip', [0])[0]).decode()
+        port =(request.args.get(b'port', [0])[0]).decode()
+        name =(request.args.get(b'name', [0])[0]).decode()
+        user =(request.args.get(b'user', [0])[0]).decode()
 
         logging.info('ip = {}, password = {}, port = {}, name = {}'.format(ip, password, port, name))
 
         coin = Polis(config['Polis'])
 
-        vps = VPS({
-            "connection_sting": "{}@{}:{}".format(request.args.get('user'), request.args.get('host'),
-                                                  request.args.get('port')),
-            "password": password,
-            "name": request.args.get("name")}, coin)
+        masternode = {"connection_string": "{}@{}:{}".format(user,ip,port), "password": password, "name": name}
+
+        vps = VPS(masternode, coin)
 
         '''
         does all the apt get
@@ -183,7 +182,9 @@ def create(request):
 
         result = vps.daemonconf(coin)
         logging.info("Daemon configured\n{}".format(result))
-        masternodeprivkey = "{{\"status\":\"{}}}\"".format(result)
+
+        masternode["masternodeprivkey"] = result
+
 
         result = vps.install_watcher(Polis(config["Polis"]))
         logging.info('Uploaded and ran watcher_cron.sh :\n {}'.format(result))
@@ -194,9 +195,9 @@ def create(request):
         config["masternodes"].append(masternode)
 
         with open('config.json', 'w') as outfile:
-            json.dump(config, outfile)
+            json.dump(config, outfile, sort_keys=True, indent=4, ensure_ascii=False)
 
-        return masternodeprivkey
+        return "{{\"status\":\"{}}}\"".format(masternode.masternodeprivkey)
 
     else:
         template= "new_mn.html"
