@@ -4,10 +4,10 @@ import sys
 import json
 import string
 import secrets
-import re
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit
 import argparse
+import utils
 
 '''
     Globals
@@ -18,11 +18,66 @@ default_wallet_conf_file = ""
 '''
 
 '''
+def is_sentinel_installed(connection):
+    is_installed = False
+    try:
+        # Search for Polis/sentinel in crontabl
+        result = connection.run('crontab -l | grep -c "Polis/sentinel"', hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        if result.stdout == '1\n' :
+            is_installed = True
+    except UnexpectedExit:
+        logging.info('{} does not exist !'.format(dir))
+    return is_installed
+
+'''
+
+'''
+def install_sentinel(connection, wallet_dir):
+    try:
+        logging.info("Installing sentinel !")
+        result = connection.run("apt-get install -y virtualenv", hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run("cd {}".format(wallet_dir), hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run("git clone https://github.com/polispay/sentinel.git", hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run("virtualenv venv", hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run("venv/bin/pip install -r requirements.txt", hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run("echo polis_conf={}polis.conf >> sentinel.conf".format(wallet_dir), hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run("crontab -l > tempcron", hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run("echo \"* * * * * cd {}/sentinel && ./venv/bin/python bin/sentinel.py 2>&1 >> sentinel-cron.log\" >> tempcron".format(wallet_dir), hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run("crontab tempcron", hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run("rm tempcron", hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+    except Exception as e:
+        logging.error('Could not install vps', exc_info=e)
+
+'''
+
+'''
 def is_vps_installed(connection):
     is_installed = False
     try:
         # Search for libdb4.8-dev package,
-        result = connection.run('dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev|grep -c "install ok installed"', hide=True)
+        result = connection.run('dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev | grep -c "install ok installed"', hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         if result.stdout == '1\n' :
@@ -68,12 +123,6 @@ def install_vps(connection, swap_supported = False):
             logging.info(msg.format(result))
     except Exception as e:
         logging.error('Could not install vps', exc_info=e)
-
-def get_ip_from_connection_string(str) :
-    ip = re.compile('(([2][5][0-5]\.)|([2][0-4][0-9]\.)|([0-1]?[0-9]?[0-9]\.)){3}'
-                +'(([2][5][0-5])|([2][0-4][0-9])|([0-1]?[0-9]?[0-9]))')
-    match = ip.search(str)
-    return match.group()
 
 '''
 
@@ -146,7 +195,7 @@ def transfer_new_version(connection, dir, sourceFolder, versionToUpload):
 '''
 
 '''
-def create_wallet_dir(connection, wallet_dir, PUBLICIP, PRIVATEKEY):
+def create_wallet_dir(connection, PUBLICIP, PRIVATEKEY):
     exists = is_directory_exists(connection, dir)
     if not exists:
         result = connection.run('mkdir -p {}'.format(dir), hide=True)
@@ -158,6 +207,7 @@ def create_wallet_dir(connection, wallet_dir, PUBLICIP, PRIVATEKEY):
         logging.debug(msg.format('./polis.conf', connection))
         # Setup the config file
         polis_conf = dir + 'polis.conf'
+        # source : https://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python/23728630#23728630
         RPCUSER = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
         result = connection.run('sed - i \'s/<RPCUSER>/{}/g\' {}'.format(RPCUSER, polis_conf), hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
@@ -366,18 +416,25 @@ def main():
                     wallet_conf_file = wallet_dir+default_wallet_conf_file
 
                     if not is_directory_exists(connection, wallet_dir) :
-                        create_wallet_dir(connection, wallet_dir, get_ip_from_connection_string(cnx["connection_string"]), cnx["private_key"])
+                        create_wallet_dir(connection, get_ip_from_connection_string(cnx["connection_string"]), cnx["private_key"])
 
                     # Clean up old wallet dir
                     clean_up_wallet_dir(connection, wallet_dir)
+
                     # Clean up the config file
                     if args.cleanConfig :
                         clean_up_config(connection, wallet_conf_file, "clear addnode")
+
                     # Add addnode in the config file
                     if args.addNodes :
                         add_addnode(connection, wallet_conf_file)
+
                     # Start the new daemon
                     start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
+
+                    # install sentinel
+                    if not is_sentinel_installed(connection):
+                        install_sentinel(connection, wallet_dir)
 
                 logging.info('{} Has been successfully upgraded'.format(cnx["connection_string"]))
 
