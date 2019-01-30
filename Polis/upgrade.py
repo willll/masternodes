@@ -229,7 +229,7 @@ def create_wallet_dir(connection, PUBLICIP, PRIVATEKEY):
 
 '''
 def clean_up_wallet_dir(connection, wallet_dir):
-    resources_to_delete = ["chainstate", "blocks", "peers.dat"]
+    resources_to_delete = [ "chainstate", "blocks", "peers.dat", "backups", "banlist.dat", "database", "db.log", "debug.log" ]
     to_delete_str = " ".join(wallet_dir + str(x) for x in resources_to_delete)
     try:
         if wallet_dir == "" :
@@ -299,6 +299,42 @@ def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False, use_reind
 '''
 
 '''
+def install_boostrap(connection, target_directory, cnx):
+    global default_wallet_dir
+    global default_wallet_conf_file
+    # Stop the daemon if running
+    stop_daemon(connection, target_directory)
+
+    wallet_dirs = []
+
+    use_wallet_dir = False
+
+    if "wallet_directories" in cnx:
+        for wallet in cnx["wallet_directories"]:
+            wallet_dirs.append(wallet["wallet_directory"])
+        use_wallet_dir = True
+
+    else:
+        wallet_dirs = [default_wallet_dir]
+
+    for wallet_dir in wallet_dirs:
+        wallet_conf_file = wallet_dir + default_wallet_conf_file
+        # Clean up old wallet dir
+        clean_up_wallet_dir(connection, wallet_dir)
+        result = connection.run("cd {}".format(wallet_dir), hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        # Download bootstrap and
+        result = connection.run("wget https://github.com/cryptosharks131/Polis/releases/download/v1.4.8.1/bootstrap.zip && unzip bootstrap.zip && rm bootstrap.zip", hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        # Start the new daemon
+        start_daemon(connection, target_directory, wallet_dir, use_wallet_dir, True)
+
+
+'''
+
+'''
 def reindex_masternode(connection, target_directory, cnx):
     global default_wallet_dir
     global default_wallet_conf_file
@@ -352,6 +388,7 @@ def main():
     parser.add_argument('-addNodes', action='store_true', help='edit the config file to add addnode entries')
     parser.add_argument('-onlyReindex', action='store_true', help='only reindex the masternodes')
     parser.add_argument('-onlyInstallVPS', action='store_true', help='only install the VPSs')
+    parser.add_argument('-InstallBootstrap', action='store_true', help='only install the VPSs')
     args = parser.parse_args()
 
     # Load configuration file
@@ -387,6 +424,10 @@ def main():
                     logging.info('{} Has been successfully installed'.format(cnx["connection_string"]))
                 else:
                     logging.info('{} Already installed'.format(cnx["connection_string"]))
+
+            elif args.InstallBootstrap :
+                install_boostrap(connection, target_directory, cnx)
+                logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
 
             else:
                 # Install VPS
