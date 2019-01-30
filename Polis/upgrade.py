@@ -325,7 +325,17 @@ def install_boostrap(connection, target_directory, cnx):
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         # Download bootstrap and
-        result = connection.run("wget https://github.com/cryptosharks131/Polis/releases/download/v1.4.8.1/bootstrap.zip && unzip bootstrap.zip && rm bootstrap.zip", hide=True)
+        result = connection.run("wget https://github.com/cryptosharks131/Polis/releases/download/v1.4.8.1/bootstrap.zip", hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run(
+            "unzip bootstrap.zip",
+            hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = connection.run(
+            "rm bootstrap.zip",
+            hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         # Start the new daemon
