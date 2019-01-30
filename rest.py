@@ -183,7 +183,7 @@ def create(request):
 
         result = vps.daemonconf(coin)
         logging.info("Daemon configured\n{}".format(result))
-        masternodeprivkey = "{{\"status\":\"{}\"".format(result)
+        masternodeprivkey = "{{\"status\":\"{}}}\"".format(result)
 
         result = vps.install_watcher(Polis(config["Polis"]))
         logging.info('Uploaded and ran watcher_cron.sh :\n {}'.format(result))
@@ -199,7 +199,7 @@ def create(request):
         return masternodeprivkey
 
     else:
-        template="new_mn.html"
+        template= "new_mn.html"
         return render_without_request(template)
 
 '''
