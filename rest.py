@@ -107,9 +107,8 @@ with app.subroute("/scripts") as scripts:
     '''
     Install watcher using this, or get log, or get version (hash).
     '''
-    @scripts.route('/watcher', methods=['GET'])
-    def watcher_install(request):
-        mnidx = int(request.args.get(b'mnidx',[0])[0])
+    @scripts.route('/watcher/<int:mnidx>', methods=['GET'])
+    def watcher_install(request, mnidx):
         return VPS(config["masternodes"][mnidx], Polis(config['Polis'])).install_watcher(Polis(config["Polis"]))
 
 
@@ -216,9 +215,8 @@ Upgrade masternode to new version
 
 @param mnidx: index of the masternode to upgrade
 '''
-@app.route('/upgrade', methods=['GET'])
-def upgrade(request):
-    mnidx =int(request.args.get(b'mnidx', [0])[0])
+@app.route('/upgrade/<int:mnidx>/', methods=['GET'])
+def upgrade(request, mnidx):
     coin = Polis(config["Polis"])
     vps = VPS(config["masternodes"][mnidx], coin)
 
@@ -252,9 +250,8 @@ with app.subroute("/sys") as sys:
     '''
     Read crontab for given mn and return
     '''
-    @sys.route('/cron/read')
-    def cron_read(request):
-        mnidx = int(request.args.get(b'mnidx', [0])[0])
+    @sys.route('/cron/read/<int:mnidx>')
+    def cron_read(request, mnidx):
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
         result = {"result": vps.actions("view_crontab", coin).splitlines()}
@@ -265,9 +262,8 @@ with app.subroute("/sys") as sys:
     '''
     get processes running
     '''
-    @sys.route('/ps')
-    def ps(request):
-        mnidx = int(request.args.get(b'mnidx', [0])[0])
+    @sys.route('/ps/<int:mnidx>')
+    def ps(request, mnidx):
         coin = Polis(config["Polis"])
         return returnValue(json.dumps({"result": VPS(config["masternodes"][mnidx], coin).actions("ps", coin).splitlines()}))
 
@@ -293,24 +289,33 @@ with app.subroute("/mns") as mns:
         return render_without_request(template, masternodes=preload)
 
 
+    '''
+    Nonblocking masternode status request using await
+    '''
+    @mns.route('/cli/mnsync/reset/<int:mnidx>', methods=['GET'])
+    def cli_mnsync_reset(request, mnidx):
+        logging.info("mnsync status called with mnidx: {} and mnss".format(mnidx))
+        request.redirect("/mns/cli/action?mnidx={}&actidx={}".format(mnidx, 'mnsr'))
+        return None
 
 
     '''
     Nonblocking masternode status request using await
     '''
-    @mns.route('/cli/mnsync/status', methods=['GET'])
-    def cli_mnsync_status(request):
-        mnidx = int(request.args.get(b'mnidx', [0])[0])
+    @mns.route('/cli/mnsync/status/<int:mnidx>', methods=['GET'])
+    def cli_mnsync_status(request, mnidx):
         logging.info("mnsync status called with mnidx: {} and mnss".format(mnidx))
         request.redirect("/mns/cli/action?mnidx={}&actidx={}".format(mnidx, 'mnss'))
         return None
+
+
     '''
     Nonblocking masternode status request using await
     '''
-    @mns.route('/cli/masternode/status', methods=['GET'])
-    def cli_masternode_status(request):
-        mnidx = int(request.args.get(b'mnidx', [0])[0])
-        request.redirect("/mns/cli/action?mnidx={}&actidx={}".format(mnidx, 'mnstat'))
+    @mns.route('/cli/<int:mnidx>/masternode/status', methods=['GET'])
+    def cli_masternode_status(request, mnidx):
+        redirect = "/mns/cli/action/{}/{}".format(mnidx, 'mnstat')
+        request.redirect(redirect)
         return None
 
     '''
@@ -318,15 +323,12 @@ with app.subroute("/mns") as mns:
     actidx: the action
     mnidx: index of the masternode
     '''
-    @mns.route('/cli/action', methods=['GET'])
-    async def cli_mn_action(request):
-        mnidx =int(request.args.get(b'mnidx', [0])[0])
-        actidx =request.args.get(b'actidx', [b'mnstat'])[0]
-
-        logging.info("ARGUMENTS: 1 / {}  /2/ {} /3/ {} ".format(request.args, request.args.get(b'actidx'), actidx))
-        actions = {b'mnstat': 'masternode status',
-                   b'gi': 'getinfo',
-                   b'mnss': 'mnsync status'}
+    @mns.route('/cli/action/<int:mnidx>/<actidx>', methods=['GET'])
+    async def cli_mn_action(request, mnidx, actidx = 0):
+        actions = {'mnstat': 'masternode status',
+                   'gi': 'getinfo',
+                   'mnss': 'mnsync status',
+                   'mnsr': 'mnsync reset'}
 
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)

@@ -65,6 +65,7 @@
 -->
 
 <button id="updateAll">Update all</button>
+<button id="getinfoAll">getinfo all</button>
 <table class="table table-striped table-bordered table-dark">
     <thead>
     <tr>
@@ -93,6 +94,7 @@
         </td>
         <td>
             <a class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}'><i title="mnsync status" class="fas fa-charging-station"></i></a>
+            <a class='mnsync_reset btn btn-info btn-xs' href='#' id='mnsyncreset{{ item.idx }}'><i title="mnsync reset" class="fas fa-undo"></i></a>
             <a class='getinfo btn btn-info btn-xs' href='#' id='getinfo_{{ item.idx }}'><i title="getinfo" class="fas fa-info"></i></a>
             <a class='getcron btn btn-info btn-xs' href='#' id='getcron_{{ item.idx }}'><i title="Get crontab" class="fas fa-business-time"></i></a>
             <a class='getconfig btn btn-info btn-xs' href='#' id='getconfig_{{ item.idx }}'><i title="Get config" class="fas fa-cog"></i></a>
@@ -162,18 +164,18 @@ var BLOCKHEIGHT = 0
     }
     function installScript(id)
     {
-      mnidx = id.split("_").pop()
-      console.log("Installing watcher for: "+ id); 
-      $.getJSON('/scripts/watcher', { mnidx: mnidx}, function(data) {
-          console.log("Installing watcher for: "+ mnidx ); 
+      mnix = id.split("_").pop()
+      rest = '/scripts/watcher/'+mnidx
+      $.getJSON(rest, {}, function(data) {
           $("#status_"+mnidx).text(data);
       });
     }
 
     function updateStatus(mn_status)
     {
-      $('#status_'+mn_status).text('Updating...'+mn_status)
-      $.getJSON('/mns/cli/masternode/status', { mnidx: mn_status.split("_").pop()}, function(data) {
+      $(mn_status).text('Updating...'+mn_status)
+      rest = "cli/"+mn_status.split("_").pop()+"/masternode/status"
+      $.getJSON(rest, {}, function(data) {
           mnidx = mn_status.split("_").pop()
           mn_status = $('#status_'+mnidx)
           console.log(data)
@@ -215,31 +217,69 @@ var BLOCKHEIGHT = 0
         })
     }
 
+    function mnsync(id, fn)
+    {
+        rest = '/mns/cli/mnsync/'+fn+'/'+id
+        $.getJSON(rest, {}, function(data) {
+            console.log("Mnsync result: "+JSON.stringify(data))
+            $("#output").append(JSON.stringify(data));
+         });
+    }
+
+    $('.mnsync_reset').bind('click', function(){
+        id =$(this).attr('id').split("_")[1]
+        console.log("mnsync reset requested : "+id)
+        mnsync(id, 'reset')
+    });
+    $('.mnsync_status').bind('click', function(){
+        id =$(this).attr('id').split("_")[1]
+        console.log("mnsync status requested "+id)
+        mnsync(id, 'status')
+    });
+
+    $('.getconfig').bind('click', function(){
+        console.log("getconfig requested")
+        $.getJSON('/config/read', {}, function(data) {
+            console.log("GetConfig: " + data.result)
+            $("#output").append(JSON.stringify);
+        });
+    });
+    $('.getcron').bind('click', function(){
+        rest = '/sys/cron/read/'+$(this).attr('id').split("_")[1]
+        $.getJSON(rest, {}, function(data) {
+            $("#output").append(data.result);
+        })
+    });
+
+
     function upgradeMN(id)
     {
       mnidx = id.split("_").pop();
       console.log("UpgradedMN : "+ mnidx );
       $("#row_"+mnidx).children('td, th').css('background-color','orange');
-      $.getJSON('/upgrade', { mnidx: mnidx }, function(data) {
+      rest = "/upgrade/"+mnidx
+      $.getJSON(rest, {}, function(data) {
           $("#row_"+mnidx).children('td, th').css('background-color','blue');
           $("Done upgrading!: "+ JSON.stringify(data))
       });
     }
+
     function restartMN(id, reindex)
     {
       mnidx = id.split("_").pop();
       console.log("restarting: "+ mnidx);
       $("#row_"+mnidx).children('td, th').css('background-color','orange');
-      $.getJSON('/daemon/launch', { mnidx: mnidx, reindex : reindex }, function(data) {
+      rest = '/daemon/launch/'+mnidx+( reindex? "/1/": "/" )
+      $.getJSON(rest, {}, function(data) {
           console.log("Restarting MN : "+ mnidx + " " + reindex? "and reindexing it ": "" );
       });
     }
 
     function getinfo(id)
     {
-        getinfo_cell = $("#display_getinfo_"+id)
-        $.getJSON('/mns/cli/action', { mnidx: id, actidx: 'gi' }, function(data) {
-            getinfo_cell.html("Block: "+data.blocks+ "<br>v"+data.version)
+        rest = '/mns/cli/action/'+ id+'/gi'
+        $.getJSON(rest, {}, function(data) {
+            $("#display_getinfo_"+id).html("Block: "+data.blocks+ "<br>v"+data.version)
             console.log("getinfo: "+JSON.stringify(data))
             $("#output").append(JSON.stringify(data));
             getBlockHeight( 0 )
@@ -265,6 +305,12 @@ var BLOCKHEIGHT = 0
             updateStatus(mn_status.attr("id"))
         });
     }
+    function getinfoAll()
+    {
+        $(".display_getinfo").each(function(){
+            getinfo($(this).attr("id").split("_").pop())
+        });
+    }
     $('.update').bind('click', function() {
         var id = '#status_'+$(this).attr('id') 
         console.log("Updating status for : div"+ id); 
@@ -274,13 +320,16 @@ var BLOCKHEIGHT = 0
         console.log("Update all" );
         updateAll();
     });
+    $('.getinfoAll').bind('click', function() {
+        getinfoAll();
+    });
      $('.getinfo').bind('click', function(){
-        var id = $(this).attr('id').split("_")[1]
-        console.log("getinfo requested: "+id)
+        var id = $(this).attr('id').split("_").pop()
+        console.log("Getinfo requested: "+id)
         getinfo(id)
     });
     $('.install').bind('click', function(){ 
-        var id = "#status_"+$(this).attr('id').split("_")[1] 
+        var id = "#status_"+$(this).attr('id').split("_").pop()
         console.log("Clicked :"+id)
         installScript(id)
     });
@@ -320,34 +369,12 @@ var BLOCKHEIGHT = 0
         // reset the selector ...
         $(this).prop('selectedIndex',0);
     });
-    $('.mnsync_status').bind('click', function(){
-        data = {"status":"Empty"}
-        var id = $(this).attr('id').split("_")[1]
-        console.log("mnsync status requested: "+id)
-        $.getJSON('/mns/cli/mnsync/status', { mnidx: id }, function(data) {
-            console.log("Mnsync result: "+JSON.stringify(data))
-            $("#output").append(JSON.stringify(data));
-         });
-    });
-    $('.getconfig').bind('click', function(){
-        console.log("getconfig requested")
-        $.getJSON('/config/read', {}, function(data) {
-            console.log("GetConfig: " + data.result)
-            $("#output").append(JSON.stringify);
 
-        });
-    });
-    $('.getcron').bind('click', function(){
-        var id = $(this).attr('id').split("_")[1]
-        console.log("Crontab requested:")
-        $.getJSON('/sys/cron/read', { mnidx: id }, function(data) {
-            $("#output").append(data.result);
-        })
-    });
   $( document ).ready(function() {
       console.log("Document ready")
-      updateAll();
       getBlockHeight(1);
+      updateAll();
+      getinfoAll();
 
     });
 
