@@ -329,7 +329,7 @@ def install_boostrap(connection, target_directory, cnx):
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         # Start the new daemon
-        start_daemon(connection, target_directory, wallet_dir, use_wallet_dir, True)
+        start_daemon(connection, target_directory, wallet_dir, use_wallet_dir, False)
 
 
 '''
