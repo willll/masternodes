@@ -234,8 +234,8 @@ def add_addnode(connection, wallet_config_file):
 '''
 def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False, use_reindex=False):
     # Restart the daemon
+    conx_str = '{}/polisd -daemon'.format(dir)
     try:
-        conx_str = '{}/polisd -daemon'.format(dir)
         if use_reindex:
             conx_str += ' -reindex'
         if wallet_dir != "" and use_wallet_dir :
@@ -244,7 +244,7 @@ def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False, use_reind
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
     except Exception as e :
-        logging.error('Could not start  : {}'.format('polisd'), exc_info=e)
+        logging.error('Could not start  : {}'.format(conx_str), exc_info=e)
 
 '''
 
