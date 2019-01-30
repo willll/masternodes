@@ -14,7 +14,6 @@ class Polis(Coin):
         self.version_to_upload = config["version_to_upload"]
         self.scripts = config["scripts"]
         self.preconf = config["preconf"]
-        self.confdaemon = config["confdaemon"]
         self.cli = config["cli"]
         self.daemon = config["daemon"]
         self.vps = config["vps"]
