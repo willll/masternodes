@@ -159,12 +159,12 @@ TODO:
 @app.route('/create',methods=['POST', 'GET'])
 def create(request):
     if request.method == "POST":
-        password = request.args.get('password')
+        password =str(request.args.get(b'password', [0])[0])
+        ip =str(request.args.get(b'ip', [0])[0])
+        port =int(request.args.get(b'port', [0])[0])
+        name =str(request.args.get(b'name', [0])[0])
 
-        logging.info('ip = {}, password = {}, port = {}, name = {}'.format(request.args.get('ip'),
-                                                                           password,
-                                                                           request.args.get('port'),
-                                                                           request.args.get('name')))
+        logging.info('ip = {}, password = {}, port = {}, name = {}'.format(ip, password, port, name))
 
         coin = Polis(config['Polis'])
 
@@ -172,7 +172,7 @@ def create(request):
             "connection_sting": "{}@{}:{}".format(request.args.get('user'), request.args.get('host'),
                                                   request.args.get('port')),
             "password": password,
-            "name": request.args.get("name")},coin)
+            "name": request.args.get("name")}, coin)
 
         '''
         does all the apt get
@@ -182,7 +182,8 @@ def create(request):
         logging.info("Preconf done apt gets and made directorys, copied polis.tgz:\n{}".format(result))
 
         result = vps.daemonconf(coin)
-        logging.info("Daemon configures\n{}".format(result))
+        logging.info("Daemon configured\n{}".format(result))
+        masternodeprivkey = "{{\"status\":\"{}\"".format(result)
 
         result = vps.install_watcher(Polis(config["Polis"]))
         logging.info('Uploaded and ran watcher_cron.sh :\n {}'.format(result))
@@ -191,10 +192,11 @@ def create(request):
         logging.info('Uploaded and ran sentinel_setup.sh :\n {}'.format(result))
 
         config["masternodes"].append(masternode)
+
         with open('config.json', 'w') as outfile:
             json.dump(config, outfile)
 
-        return result
+        return masternodeprivkey
 
     else:
         template="new_mn.html"

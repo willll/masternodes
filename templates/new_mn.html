@@ -24,7 +24,7 @@
 
 <script type=text/javascript>
 
-  function updateStatus()
+  function create()
     {
       shell_status.text('Updating...')
       ip = $("#create input#ip").val()
@@ -36,6 +36,7 @@
       $.getJSON('/create', {ip = ip, password=pw, port = port, name = name}, function(data) {
           console.log("Loading details for mn; ");
           console.log(data)
+          $("#result").text("Received masternodeprivkey: "+data.status)
           
           // Fill table with masternode list.
           // data: should contain json with IP:index in list and name of masternode( if in config) 

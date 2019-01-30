@@ -21,4 +21,3 @@ crontab -l > tempcron
 echo "* * * * * cd $COINDIR/sentinel && ./venv/bin/python bin/sentinel.py 2>&1 >> sentinel-cron.log" >> tempcron
 crontab tempcron
 rm tempcron
-echo "source ~/.bash_aliases"

@@ -1,6 +1,9 @@
 from invoke.exceptions import UnexpectedExit
 from fabric import Connection
 from config import logging,config
+import secrets
+import string
+
 
 class VPS:
     def __init__(self, masternode, coin):
@@ -107,7 +110,18 @@ class VPS:
         except Exception as e:
             return '{"status":"failed"}'
 
+
     '''
+    Generate password for rpc using this.
+    
+    '''
+    def generatePassword(self , length=30):
+        alphabet = string.ascii_letters + string.digits
+        password = ''.join(secrets.choice(alphabet) for i in range(length))
+        return password
+
+
+    ''' 
     second part configuration script, generates privkey and gets polisd running properly
     TODO: this can easily be all generated within the script and
     simply pasted into the remote .wallet file at location. Might
@@ -116,13 +130,15 @@ class VPS:
     '''
     def daemonconf(self, coin):
         try:
-            result = self.connection.put(coin.confdaemon )
-            result = self.connection.run("/bin/bash {} {} {} {} {}".format(
-                coin.confdaemon, coin.coin_name, coin.addnode,
-                self.installed_folder, self.getIP()), hide=False)
+            self.connection.put(coin.scripts['local_path']+coin.scripts['confdaemon'])
+            cmd = "/bin/bash {} {} {} {} {}".format(coin.scripts['confdaemon'], coin.coin_name, coin.addnode,
+                                                     coin.default_dir, self.getIP(), self.generatePassword())
+            result = self.connection.run(cmd, hide=False)
+            #should contain masternodeprivkey
+            return result.stdout
         except Exception as e:
             logging.error('Exception in daemonconf ')
-            return  '{"status":"failed"}'
+            return '{"status":"failed"}'
 
     '''
     '''

@@ -164,10 +164,10 @@ var BLOCKHEIGHT = 0
 
     function updateStatus(mn_status)
     {
-      $('#'+mn_status).text('Updating...')
+      $('#status_'+mn_status).text('Updating...'+mn_status)
       $.getJSON('/mns/cli/masternode/status', { mnidx: mn_status.split("_").pop()}, function(data) {
           mnidx = mn_status.split("_").pop()
-          mn_status = $('#'+mn_status)
+          mn_status = $('#status_'+mnidx)
           console.log(data)
           console.log("Loading details for mn; "+ mnidx);
 
@@ -181,7 +181,7 @@ var BLOCKHEIGHT = 0
               $("#row_"+mnidx).children('td, th').css('background-color','red');
           }
           else{
-              console.log("Change to green: "+"#row_"+mnidx)
+              console.log("Change to green: "+"#row_"+mnidx+" update status:" + data.status)
               $("#row_"+mnidx).children('td, th').css('background-color','green');
               mn_status.text(data.status);
           }
