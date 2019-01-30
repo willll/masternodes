@@ -27,7 +27,7 @@ class VPS:
 
 
         try:
-            self.connection = Connection(masternode["connection_string"],
+            self.connection = Connection(self.masternode["connection_string"],
                                          connect_timeout=31, connect_kwargs=kwargs)
         except UnexpectedExit as e:
             #possibly try to start  the daemon again
@@ -95,13 +95,17 @@ class VPS:
     '''
     def preconf(self, coin):
         try:
-            self.connection.put(coin.preconf)
-            self.connection.run("/bin/bash {}".format(coin.preconf))
-            self.connection.put(coin.version_to_upload)
-            result = self.connection.run("mkdir {} && mkdir {} && tar zxvf {} {}".format(config["WalletsFolder"],
-                                                                                         self.installed_folder,
+            self.connection.put(coin.scripts["local_path"]+coin.scripts["preconf"])
+            cmd = "/bin/bash {}".format(coin.scripts["preconf"])
+            self.connection.run(cmd, hide=False)
+            #copy bin
+            #remove above hardcoded path
+            upload = "Polis/"+coin.version_to_upload
+            self.connection.put(upload)
+            result = self.connection.run("mkdir {} && mkdir {} && tar zxvf {} -C {}".format(config["WalletsFolder"],
+                                                                                         coin.default_dir,
                                                                                          coin.version_to_upload,
-                                                                                         self.installed_folder), hide=False)
+                                                                                         coin.default_dir), hide=False)
 
             return result
         except UnexpectedExit as e:
@@ -130,9 +134,13 @@ class VPS:
     '''
     def daemonconf(self, coin):
         try:
-            self.connection.put(coin.scripts['local_path']+coin.scripts['confdaemon'])
-            cmd = "/bin/bash {} {} {} {} {}".format(coin.scripts['confdaemon'], coin.coin_name, coin.addnode,
-                                                     coin.default_dir, self.getIP(), self.generatePassword())
+            daemonconf = coin.scripts['local_path']+coin.scripts['confdaemon']
+            pw = self.generatePassword()
+            ip = self.getIP()
+            coin_name = "polis"
+            self.connection.put(daemonconf)
+            cmd = "/bin/bash {} {} {} {} {}".format(coin.scripts['confdaemon'], coin_name, coin.addnode,
+                                                     coin.default_dir, ip, pw)
             result = self.connection.run(cmd, hide=False)
             #should contain masternodeprivkey
             return result.stdout
@@ -163,10 +171,9 @@ class VPS:
     def install_sentinel(self, coin):
         try:
             self.connection.put(coin.scripts["local_path"]+coin.scripts["sentinel_setup"])
-            result = self.connection.run("/bin/bash {} {} {} {}".format(coin.scripts["sentinel_setup"],
-                                                                   coin.sentinel_git,
-                                                                    self.installed_folder,
-                                                                   coin.coin_name), hide=False)
+            cmd = "/bin/bash {} {} {} {}".format(coin.scripts["sentinel_setup"], coin.sentinel_git, coin.default_dir,
+                                                                   coin.coin_name)
+            result = self.connection.run(cmd, hide=False)
             logging.info('Uploaded sentinel_setup.sh:\n {}'.format(result))
             return result
         except UnexpectedExit as e:
