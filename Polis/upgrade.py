@@ -35,25 +35,34 @@ def is_vps_installed(connection):
     BUG : Must be logged in root ! 
     TODO : add an interactive shell to ask user for credentials
 '''
-def install_vps(connection):
+def install_vps(connection, swap_supported = False):
     try:
-        cmds = [ "touch /var/swap.img",
-                "chmod 600 /var/swap.img",
-                "dd if=/dev/zero of=/var/swap.img bs=1024k count=2000",
-                "mkswap /var/swap.img",
-                "swapon /var/swap.img",
-                "echo \"/var/swap.img none swap sw 0 0\" >> /etc/fstab",
-                "apt-get update -y",
-                "apt-get upgrade -y",
-                "apt-get dist-upgrade -y",
-                "apt-get install nano htop git -y",
-                "apt-get install build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils software-properties-common -y",
-                "apt-get install libboost-all-dev -y",
-                "add-apt-repository ppa:bitcoin/bitcoin -y",
-                "apt-get update -y",
-                "apt-get install libdb4.8-dev libdb4.8++-dev -y" ]
+        cmds_create_swap = [    "touch /var/swap.img",
+                                "chmod 600 /var/swap.img",
+                                "dd if=/dev/zero of=/var/swap.img bs=1024k count=2000",
+                                "mkswap /var/swap.img",
+                                "swapon /var/swap.img",
+                                "echo \"/var/swap.img none swap sw 0 0\" >> /etc/fstab" ]
 
-        for cmd in cmds :
+        cmds_apt_get = [        "apt-get update -y",
+                                "apt-get upgrade -y",
+                                "apt-get dist-upgrade -y",
+                                "apt-get install nano htop git -y",
+                                "apt-get install build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils software-properties-common -y",
+                                "apt-get install libboost-all-dev -y",
+                                "add-apt-repository ppa:bitcoin/bitcoin -y",
+                                "apt-get update -y",
+                                "apt-get install libdb4.8-dev libdb4.8++-dev -y" ]
+
+        if swap_supported :
+            logging.info("Create SWAP file !")
+            for cmd in cmds_create_swap :
+                result = connection.run('{}'.format(cmd), hide=True)
+                msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+                logging.info(msg.format(result))
+
+        logging.info("Download dependencies !")
+        for cmd in cmds_apt_get:
             result = connection.run('{}'.format(cmd), hide=True)
             msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
             logging.info(msg.format(result))
