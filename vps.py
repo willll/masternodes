@@ -34,8 +34,7 @@ class VPS:
             logging.error('Connecting failed unexpectedly', exc_info=e)
             return '{"status":"restart"}'
         except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e),
-                          exc_info=e)
+            logging.error(f"Could not do_action {self.masternode['connection_string']} : {e}", exc_info=e)
             return '{"status":"restart"}'
 
     def __del__(self):
@@ -48,15 +47,16 @@ class VPS:
     def actions(self, action, coin):
         try:
             # list of actions that are accepted
-            actions = {'clean_wallet':'rm -rf {}/{{blocks,peers.dat,chainstate}}'.format(self.wallet_directory),
-                       'kill_daemon':'killall -9 {}'.format(coin.daemon),
-                       'view_crontab':'crontab -l', 'ps':'ps -ef'}
+            actions = {"clean_wallet": f"rm -rf {self.wallet_directory}/{{blocks,peers.dat,chainstate}}",
+                       "kill_daemon": f"killall -9 {coin.daemon}",
+                       "view_crontab": "crontab -l",
+                       "ps": "ps -ef"}
 
             result = self.connection.run(actions[action], hide=False)
 
             return result.stdout
         except Exception as e :
-            logging.error('Problem in actions method for {}'.format(action), exc_info=e)
+            logging.error(f"Problem in actions method for {action}", exc_info=e)
             return "{'status':'restart'}"
 
     '''
@@ -75,20 +75,20 @@ class VPS:
     def upgrade(self, coin):
         try:
             self.connection.put("Polis/"+coin.version_to_upload)
-            logging.info("Uploaded {}".format(coin.version_to_upload))
+            logging.info(f"Uploaded {coin.version_to_upload}")
             self.connection.put(coin.scripts["local_path"]+coin.scripts["upgrade"])
-            cmd = "/bin/bash {} {} {} {} {} \"{}\"".format(coin.scripts["upgrade"], coin.cli, self.installed_folder, coin.daemon, self.wallet_directory, coin.addnode)
-            logging.info("Uploaded {}".format(coin.scripts["local_path"]+coin.scripts["upgrade"]))
+            cmd = f"/bin/bash {coin.scripts['upgrade']} {coin.cli} {self.installed_folder} {coin.daemon} {self.wallet_directory} '{coin.addnode}'"
+            logging.info(f"Uploaded {coin.scripts['local_path']+coin.scripts['upgrade']}")
             result = self.connection.run(cmd, hide=False)
 
             logging.info("Done executing: ".format(result.stdout))
-            success = "success: result.stdout: {}".format(result.stdout)
+            success = f"success: result.stdout: {result.stdout}"
             return success
         except UnexpectedExit as e:
              logging.warning("Problem upgrading", exc_info=e)
              return '{"status":"failed"}'
         except Exception as e:
-             logging.warning("Could not upload daemon bin: ".format(e), exc_info=e)
+             logging.warning(f"Could not upload daemon bin: {e} ", exc_info=e)
              return '{"status":"failed"}'
 
     '''
@@ -96,16 +96,14 @@ class VPS:
     def preconf(self, coin):
         try:
             self.connection.put(coin.scripts["local_path"]+coin.scripts["preconf"])
-            cmd = "/bin/bash {}".format(coin.scripts["preconf"])
+            cmd = f"/bin/bash {coin.scripts['preconf']}"
             self.connection.run(cmd, hide=False)
             #copy bin
             #remove above hardcoded path
             upload = "Polis/"+coin.version_to_upload
             self.connection.put(upload)
-            result = self.connection.run("mkdir {} && mkdir {} && tar zxvf {} -C {}".format(config["WalletsFolder"],
-                                                                                         self.installed_folder,
-                                                                                         coin.version_to_upload,
-                                                                                         self.installed_folder), hide=False)
+            cmd= f"mkdir {config['WalletsFolder']} && mkdir {self.installed_folder} && tar zxvf {coin.version_to_upload} -C {self.installed_folder}"
+            result = self.connection.run(cmd, hide=False)
 
             return result
         except UnexpectedExit as e:
@@ -139,8 +137,7 @@ class VPS:
             ip = self.getIP()
             coin_name = "polis"
             self.connection.put(daemonconf)
-            cmd = "/bin/bash {} {} {} {} {}".format(coin.scripts['confdaemon'], coin_name, coin.addnode,
-                                                    self.installed_folder, ip, pw)
+            cmd = f"/bin/bash {coin.scripts['confdaemon']} {coin_name} {coin.addnode} {self.installed_folder} {ip} {pw}"
             result = self.connection.run(cmd, hide=False)
             #should contain masternodeprivkey
             return result.stdout
@@ -154,78 +151,76 @@ class VPS:
         try:
             self.connection.put(coin.scripts["local_path"]+coin.scripts["watcher_cron"])
             logging.info('Uploaded watcher_cron.sh')
-            cmd = "/bin/bash {} {} {} {} {}".format(coin.scripts["watcher_cron"], coin.name, self.installed_folder,
-                                                    coin.daemon, self.wallet_directory)
+            cmd = f"/bin/bash {coin.scripts['watcher_cron']} {coin.name} {self.installed_folder} {coin.daemon} {self.wallet_directory}"
             result = self.connection.run(cmd, hide=False)
             if result.stdout == '' and result.stderr == '':
                 return "{'status':'success'}"
 
             return "{'status':'There was a problem installing watcher'}"
         except UnexpectedExit as e:
-            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
+            logging.warning(f"{coin.cli} exited unexpectedly", exc_info=e)
             return '{"status":"failed"}'
         except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e), exc_info=e)
+            logging.error(f"Could not do_action {self.masternode['connection_string']} : {e}", exc_info=e)
             return '{"status":"failed"}'
 
     def install_sentinel(self, coin):
         try:
             self.connection.put(coin.scripts["local_path"]+coin.scripts["sentinel_setup"])
-            cmd = "/bin/bash {} {} {} {}".format(coin.scripts["sentinel_setup"], coin.sentinel_git,
-                                                 self.installed_folder, coin.coin_name)
+            cmd = f"/bin/bash {coin.scripts['sentinel_setup']} {coin.sentinel_git} {self.installed_folder} {coin.coin_name} {self.wallet_directory}"
             result = self.connection.run(cmd, hide=False)
-            logging.info('Uploaded sentinel_setup.sh:\n {}'.format(result))
+            logging.info(f"Uploaded sentinel_setup.sh:\n {result}")
             return result
         except UnexpectedExit as e:
-            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
+            logging.warning(f"{coin.cli} exited unexpectedly ", exc_info=e)
             return '{"status":"failed"}'
         except Exception as e:
-            logging.error('Could not do_action {} : {}'.format(self.masternode["connection_string"], e), exc_info=e)
+            logging.error(f"Could not do_action {self.masternode['connection_string']} : {e}", exc_info=e)
             return '{"status":"failed"}'
     '''
     eventually offer async_cli functions
     '''
     async def async_cli(self, action, coin):
         try:
-            cmd = "{}/{} --datadir={} {}".format(self.installed_folder, coin.cli, self.wallet_directory, action)
-            logging.info("Attempting to execute command from masternode object: {}".format(cmd))
+            cmd = f"{self.installed_folder}/{coin.cli} --datadir={self.wallet_directory} {action}"
+            logging.info(f"Attempting to execute command from masternode object: {cmd}")
             '''
             need to have a threadpool and throw this in there and await the result
             '''
             result = self.connection.run(cmd, hide=False)
-            logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
+            logging.info(f"Executed {result.command} on {result.connection.host}, got stdout:\n{result.stdout}")
             return result.stdout
         except UnexpectedExit as e:
             #possibly try to start  the daemon again
-            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
+            logging.warning(f"{coin.cli} exited unexpectedly", exc_info=e)
             return '{"status":"restart"}'
         except Exception as e:
-            logging.error('Could not do action on daemon at {}'.format(self.getIP()))
+            logging.error(f"Could not do action on daemon at {self.getIP()}")
 
     def kill_daemon(self,coin):
         try:
-            kill ="{}/{} --datadir={} stop".format(self.installed_folder, coin.cli, self.wallet_directory)
+            kill =f"{self.installed_folder}/{coin.cli} --datadir={self.wallet_directory} stop"
             result = self.connection.run(kill, hide=False)
             return result.stdout
         except UnexpectedExit as e:
             #possibly try to start  the daemon again
-            logging.warning('{} exited unexpectedly'.format(coin.cli), exc_info=e)
+            logging.warning(f"{coin.cli} exited unexpectedly", exc_info=e)
             return '{"status":"restart"}'
         except Exception as e:
-            logging.error('Could not do action on daemon at {}'.format(self.getIP()))
+            logging.error(f"Could not do action on daemon at {self.getIP()}")
             return '{"status":"restart"}'
 
 
     def daemon_action(self, coin, reindex = 0):
         try:
-            cmd = "{}/{} --datadir={}".format(self.installed_folder, coin.daemon, self.wallet_directory)
+            cmd = f"{self.installed_folder}/{coin.daemon} --datadir={self.wallet_directory}"
             if reindex == 1:
                 cmd += " -reindex"
             result = self.connection.run(cmd, hide=False)
-            logging.info("Executed {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}".format(result))
+            logging.info(f"Executed {result.command} on {result.connection.host}, got stdout:\n{result.stdout}")
             return result.stdout
         except UnexpectedExit as e:
-            logging.warning('{} exited unexpectedly'.format(coin.daemon), exc_info=e)
+            logging.warning(f"{coin.daemon} exited unexpectedly", exc_info=e)
             return '{"status":"restart"}'
         except Exception as e:
-            logging.error('Could not do action on daemon at {}'.format(self.getIP()))
+            logging.error(f"Could not do action on daemon at {self.getIP()}")
