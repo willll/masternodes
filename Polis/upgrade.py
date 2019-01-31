@@ -311,7 +311,7 @@ def install_boostrap(connection, target_directory, cnx):
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         # Download bootstrap and
-        result = connection.run("wget https://github.com/cryptosharks131/Polis/releases/download/v1.4.8.1/bootstrap.zip", hide=True)
+        result = connection.run("wget http://wbs.cryptosharkspool.com/polis/bootstrap.zip", hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         result = connection.run("unzip -o bootstrap.zip",hide=True)
@@ -381,12 +381,14 @@ def main():
     # CLI arguments
     parser = argparse.ArgumentParser(description='Masternodes upgrade script')
     parser.add_argument('--config', nargs='?', default="config.json", help='config file in Json format')
+    parser.add_argument('-deploy', action='store_true', help='deploy a new version')
     parser.add_argument('-cleanConfig', action='store_true', help='clean up to config files')
     parser.add_argument('-addNodes', action='store_true', help='edit the config file to add addnode entries')
-    parser.add_argument('-onlyReindex', action='store_true', help='only reindex the masternodes')
-    parser.add_argument('-onlyInstallVPS', action='store_true', help='only install the VPSs')
-    parser.add_argument('-installBootstrap', action='store_true', help='only install the bootstrap')
+    parser.add_argument('-reindex', action='store_true', help='reindex the masternodes')
+    parser.add_argument('-installVPS', action='store_true', help='install the VPSs')
+    parser.add_argument('-installBootstrap', action='store_true', help='install the bootstrap')
     parser.add_argument('-deployConfig', action='store_true', help='deploy polis.conf')
+    parser.add_argument('-startDaemon', action='store_true', help='start the daemon')
     args = parser.parse_args()
 
     # Load configuration file
@@ -412,24 +414,29 @@ def main():
 
             target_directory = cnx["destination_folder"]
 
-            if args.onlyReindex :
+            wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
+
+            if args.startDaemon :
+                for wallet_dir in wallet_dirs:
+                    start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
+                    logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
+
+            if args.reindex :
                 reindex_masternode(connection, target_directory, cnx)
                 logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
 
-            elif args.onlyInstallVPS :
+            if args.installVPS :
                 if not is_vps_installed(connection) :
                     install_vps(connection)
                     logging.info('{} Has been successfully installed'.format(cnx["connection_string"]))
                 else:
                     logging.info('{} Already installed'.format(cnx["connection_string"]))
 
-            elif args.installBootstrap :
+            if args.installBootstrap :
                 install_boostrap(connection, target_directory, cnx)
                 logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
 
-            elif args.deployConfig :
-                wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
-
+            if args.deployConfig :
                 for wallet_dir in wallet_dirs:
                     wallet_conf_file = wallet_dir + default_wallet_conf_file
                     create_wallet_dir(connection, wallet_dir,
@@ -439,7 +446,7 @@ def main():
                         add_addnode(connection, wallet_conf_file)
                 logging.info('{} Has been successfully configured'.format(cnx["connection_string"]))
 
-            else:
+            if args.deploy :
                 # Install VPS
                 if not is_vps_installed(connection) :
                     install_vps(connection)
@@ -452,8 +459,6 @@ def main():
 
                 # Transfer File to remote directory
                 transfer_new_version(connection, target_directory, config["SourceFolder"], config["VersionToUpload"])
-
-                wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
 
                 for wallet_dir in wallet_dirs:
                     wallet_conf_file = wallet_dir+default_wallet_conf_file
