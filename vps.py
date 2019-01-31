@@ -50,6 +50,8 @@ class VPS:
             actions = {"clean_wallet": f"rm -rf {self.wallet_directory}/{{blocks,peers.dat,chainstate}}",
                        "kill_daemon": f"killall -9 {coin.daemon}",
                        "view_crontab": "crontab -l",
+                       "unlock_wallet": f"rm -f {self.wallet_directory}/.lock",
+                       "is_daemon_up": f"ps -ef | grep -v grep | grep {coin.daemon} | wc -l",
                        "ps": "ps -ef"}
 
             result = self.connection.run(actions[action], hide=False)

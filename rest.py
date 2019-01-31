@@ -60,16 +60,16 @@ with app.subroute("/daemon") as daemon:
             for idx in mns:
                 vps = VPS(config['masternodes'][int(idx)],Polis(config['Polis']))
                 result = vps.daemon_action(Polis(config["Polis"]))
-                logging.info("Restarted {} got: {}".format(vps.getIP(), result))
+                logging.info(f"Restarted {vps.getIP()} got: {result}")
 
-            return "Result of polisd {}: {} <br><a href=/mns/cli/masternodes/status></a>".format(actions, result)
+            return f"Result of polisd {actions}: {result} <br><a href=/mns/cli/masternodes/status></a>"
         else:
             #diisplay list of all MNs with "start" button
             mnlist = "<form method='POST'>\n<select name=mns multiple>\n"
             idx = 0
 
             for masternode in config["masternodes"]:
-                mnlist += "\t<option value='" + str(idx)+ "'>"+ masternode['connection_string']+"</option>\n"
+                mnlist += f"\t<option value='{str(idx)}'>{masternode['connection_string']}</option>\n"
                 idx+=1
 
             mnlist += "</select>\n"
@@ -90,9 +90,9 @@ with app.subroute("/daemon") as daemon:
         vps = VPS(config["masternodes"][mn_idx], coin)
         result = vps.kill_daemon(coin)
         time.sleep(10)
-        logging.info("Killed daemon {}".format(result))
+        logging.info(f"Killed daemon {result}")
         result = vps.daemon_action(coin, reindex)
-        logging.info('Executed: polisd @ {} returned: {}'.format(mn_idx, result))
+        logging.info(f"Executed: polisd @ {mn_idx} returned: {result}")
         return result
 
 '''
@@ -164,11 +164,11 @@ def create(request):
         name =(request.args.get(b'name', [0])[0]).decode()
         user =(request.args.get(b'user', [0])[0]).decode()
 
-        logging.info('ip = {}, password = {}, port = {}, name = {}'.format(ip, password, port, name))
+        logging.info(f"ip = {ip}, password = {password}, port = {port}, name = {name}")
 
         coin = Polis(config['Polis'])
 
-        masternode = {"connection_string": "{}@{}:{}".format(user,ip,port), "password": password, "name": name}
+        masternode = {"connection_string": f"{user}@{ip}:{port}", "password": password, "name": name}
 
         vps = VPS(masternode, coin)
 
@@ -177,26 +177,26 @@ def create(request):
         get polisd from another mn if not available locally (polis.tgz)
         '''
         result = vps.preconf(coin)
-        logging.info("Preconf done apt gets and made directorys, copied polis.tgz:\n{}".format(result))
+        logging.info(f"Preconf done apt gets and made directorys, copied polis.tgz:\n{result}")
 
         result = vps.daemonconf(coin)
-        logging.info("Daemon configured\n{}".format(result))
+        logging.info(f"Daemon configured\n{result}")
 
         masternode["masternodeprivkey"] = result
 
 
         result = vps.install_watcher(Polis(config["Polis"]))
-        logging.info('Uploaded and ran watcher_cron.sh :\n {}'.format(result))
+        logging.info(f"Uploaded and ran watcher_cron.sh :\n {result}")
 
         result = vps.install_sentinel(coin)
-        logging.info('Uploaded and ran sentinel_setup.sh :\n {}'.format(result))
+        logging.info(f"Uploaded and ran sentinel_setup.sh :\n {result}")
 
         config["masternodes"].append(masternode)
 
         with open('config.json', 'w') as outfile:
             json.dump(config, outfile, sort_keys=True, indent=4, ensure_ascii=False)
 
-        return "{{\"status\":\"{}}}\"".format(masternode.masternodeprivkey)
+        return f"{{\"status\":\"{masternode.masternodeprivkey}}}\""
 
     else:
         template= "new_mn.html"
@@ -220,12 +220,9 @@ def upgrade(request, mnidx):
     coin = Polis(config["Polis"])
     vps = VPS(config["masternodes"][mnidx], coin)
 
-    logging.info("vps.upgrade called ! for: {}".format(vps.getIP()))
+    logging.info(f"vps.upgrade called ! for: {vps.getIP()}")
     result = vps.upgrade(coin)
     return result
-
-
-
 
 
 '''
@@ -255,7 +252,7 @@ with app.subroute("/sys") as sys:
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
         result = {"result": vps.actions("view_crontab", coin).splitlines()}
-        logging.info("Crontab requested got:\n{}".format(result))
+        logging.info(f"Crontab requested got:\n{result}")
 
         return json.dumps(result)
 
@@ -285,7 +282,7 @@ with app.subroute("/mns") as mns:
             preload.append({"cnx": mn["connection_string"], "idx": idx})
             idx += 1
 
-        logging.info("Returning preloaded template for frontend {}".format(preload))
+        logging.info(f"Returning preloaded template for frontend {preload}")
         return render_without_request(template, masternodes=preload)
 
 
@@ -294,8 +291,8 @@ with app.subroute("/mns") as mns:
     '''
     @mns.route('/cli/mnsync/reset/<int:mnidx>', methods=['GET'])
     def cli_mnsync_reset(request, mnidx):
-        logging.info("mnsync status called with mnidx: {} and mnss".format(mnidx))
-        request.redirect("/mns/cli/action?mnidx={}&actidx={}".format(mnidx, 'mnsr'))
+        logging.info("mnsync status called with mnidx: {mnidx} and mnss")
+        request.redirect(f"/mns/cli/action/{mnidx}/mnsr")
         return None
 
 
@@ -304,8 +301,8 @@ with app.subroute("/mns") as mns:
     '''
     @mns.route('/cli/mnsync/status/<int:mnidx>', methods=['GET'])
     def cli_mnsync_status(request, mnidx):
-        logging.info("mnsync status called with mnidx: {} and mnss".format(mnidx))
-        request.redirect("/mns/cli/action?mnidx={}&actidx={}".format(mnidx, 'mnss'))
+        logging.info(f"mnsync status called with mnidx: {mnidx} and mnss")
+        request.redirect(f"/mns/cli/action/{mnidx}/mnss")
         return None
 
 
@@ -314,7 +311,7 @@ with app.subroute("/mns") as mns:
     '''
     @mns.route('/cli/<int:mnidx>/masternode/status', methods=['GET'])
     def cli_masternode_status(request, mnidx):
-        redirect = "/mns/cli/action/{}/{}".format(mnidx, 'mnstat')
+        redirect = f"/mns/cli/action/{mnidx}/mnstat"
         request.redirect(redirect)
         return None
 
