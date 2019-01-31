@@ -51,7 +51,7 @@ class VPS:
                        "kill_daemon": f"killall -9 {coin.daemon}",
                        "view_crontab": "crontab -l",
                        "unlock_wallet": f"rm -f {self.wallet_directory}/.lock",
-                       "is_daemon_up": f"ps -ef | grep -v grep | grep {coin.daemon} | wc -l",
+                       "is_daemon_up": f"pidof {coin.daemon}",
                        "ps": "ps -ef"}
 
             result = self.connection.run(actions[action], hide=False)
