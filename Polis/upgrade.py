@@ -310,7 +310,7 @@ def install_boostrap(connection, target_directory, cnx):
         # Download bootstrap and unzip it
         executeCmd(connection, "wget http://wbs.cryptosharkspool.com/polis/bootstrap.zip -O {}/bootstrap.zip".format(wallet_dir))
         executeCmd(connection, "unzip -o {}/bootstrap.zip -d {}".format(wallet_dir, wallet_dir))
-        executeCmd(connection, "mv -f {}/bootstrap/* {}".format(wallet_dir, wallet_dir))
+        executeCmd(connection, "cp -rf {}/bootstrap/* {}".format(wallet_dir, wallet_dir))
         executeCmd(connection, "rm -rf {}/bootstrap*".format(wallet_dir))
         # Start the new daemon
         start_daemon(connection, target_directory, wallet_dir, use_wallet_dir, False)
