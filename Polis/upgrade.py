@@ -27,7 +27,7 @@ def executeCmd(connection, cmd, hide=True) :
 def is_sentinel_installed(connection):
     is_installed = False
     try:
-        # Search for Polis/sentinel in crontabl
+        # Search for Polis/sentinel in crontable
         result = connection.run('crontab -l | grep -c "Polis/sentinel"', hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
@@ -43,36 +43,16 @@ def is_sentinel_installed(connection):
 def install_sentinel(connection, wallet_dir):
     try:
         logging.info("Installing sentinel !")
-        result = connection.run("apt-get install -y virtualenv", hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("cd {}".format(wallet_dir), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("git clone https://github.com/polispay/sentinel.git", hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("virtualenv venv", hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("venv/bin/pip install -r requirements.txt", hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("echo polis_conf={}polis.conf >> sentinel.conf".format(wallet_dir), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("crontab -l > tempcron", hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("echo \"* * * * * cd {}/sentinel && ./venv/bin/python bin/sentinel.py 2>&1 >> sentinel-cron.log\" >> tempcron".format(wallet_dir), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("crontab tempcron", hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("rm tempcron", hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, "apt-get install -y virtualenv")
+        executeCmd(connection, "cd {}".format(wallet_dir))
+        executeCmd(connection, "git clone https://github.com/polispay/sentinel.git")
+        executeCmd(connection, "virtualenv venv")
+        executeCmd(connection, "venv/bin/pip install -r requirements.txt",)
+        executeCmd(connection, "echo polis_conf={}polis.conf >> sentinel.conf".format(wallet_dir))
+        executeCmd(connection, "crontab -l > tempcron")
+        executeCmd(connection, "echo \"* * * * * cd {}/sentinel && ./venv/bin/python bin/sentinel.py 2>&1 >> sentinel-cron.log\" >> tempcron".format(wallet_dir))
+        executeCmd(connection, "crontab tempcron")
+        executeCmd(connection, "rm tempcron")
     except Exception as e:
         logging.error('Could not install vps', exc_info=e)
 
@@ -172,17 +152,12 @@ def transfer_new_version(connection, dir, sourceFolder, versionToUpload):
         msg = "Transfered {0} to {1}"
         logging.debug(msg.format(versionToUpload, connection))
         # deflate the file
-        result = connection.run('unzip -u -o {}/{} -d {}'.format(dir, versionToUpload, dir), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, 'unzip -u -o {}/{} -d {}'.format(dir, versionToUpload, dir))
         # Delete the archive
-        result = connection.run('rm {}/{}'.format(dir, versionToUpload), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, 'rm {}/{}'.format(dir, versionToUpload))
         # fix permissions
-        result = connection.run('chmod 755 {}/*'.format(dir), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, 'chmod 755 {}/*'.format(dir))
+
     except Exception as e :
         logging.error('Could not deploy : {}'.format(versionToUpload), exc_info=e)
 
