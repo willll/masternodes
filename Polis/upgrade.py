@@ -180,19 +180,12 @@ def create_wallet_dir(connection, wallet_dir, PUBLICIP, PRIVATEKEY, delete_befor
         polis_conf = wallet_dir + 'polis.conf'
         # source : https://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python/23728630#23728630
         RPCUSER = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
-        result = connection.run('sed -i \'s/<RPCUSER>/{}/g\' {}'.format(RPCUSER, polis_conf), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, 'sed -i \'s/<RPCUSER>/{}/g\' {}'.format(RPCUSER, polis_conf))
         RPCPASSWORD = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
-        result = connection.run('sed -i \'s/<RPCPASSWORD>/{}/g\' {}'.format(RPCPASSWORD, polis_conf), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run('sed -i \'s/<PUBLICIP>/{}/g\' {}'.format(PUBLICIP, polis_conf), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run('sed -i \'s/<PRIVATEKEY>/{}/g\' {}'.format(PRIVATEKEY, polis_conf), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, 'sed -i \'s/<RPCPASSWORD>/{}/g\' {}'.format(RPCPASSWORD, polis_conf))
+        executeCmd(connection, 'sed -i \'s/<PUBLICIP>/{}/g\' {}'.format(PUBLICIP, polis_conf))
+        executeCmd(connection, 'sed -i \'s/<PRIVATEKEY>/{}/g\' {}'.format(PRIVATEKEY, polis_conf))
+
     return exists
 
 
@@ -206,9 +199,8 @@ def clean_up_wallet_dir(connection, wallet_dir):
         if wallet_dir == "" :
             raise Exception('Missing wallet directory')
         conx_str = 'rm -rf {}'.format(to_delete_str)
-        result = connection.run(conx_str, hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, conx_str)
+
     except UnexpectedExit as e :
         logging.error('Could not delete : {}'.format(to_delete_str), exc_info=e)
 
@@ -222,14 +214,13 @@ def clean_up_config(connection, wallet_config_file, option):
             raise Exception('Missing wallet configuration file')
         conx_str = ""
         if option == "clear addnode" :
-            conx_str = "sed -i '/^addnode/d' {}".format(wallet_config_file)
+            cmd = "sed -i '/^addnode/d' {}".format(wallet_config_file)
         elif option == "clear connection" :
-            conx_str = "sed -i '/^connection/d' {}".format(wallet_config_file)
+            cmd = "sed -i '/^connection/d' {}".format(wallet_config_file)
         else :
             raise Exception('Invalid option')
-        result = connection.run(conx_str, hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, cmd)
+
     except UnexpectedExit as e :
         logging.error('Could not clean up : {}'.format(wallet_config_file), exc_info=e)
 
@@ -242,10 +233,8 @@ def add_addnode(connection, wallet_config_file):
             raise Exception('Missing wallet configuration file')
 
         cmd = "echo \"addnode=insight.polispay.org:24126\naddnode=explorer.polispay.org:24126\" >> {}".format(wallet_config_file)
+        executeCmd(connection, cmd)
 
-        result = connection.run(cmd, hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
     except UnexpectedExit as e :
         logging.error('Could not add addnode : {}'.format(wallet_config_file), exc_info=e)
 
@@ -255,17 +244,16 @@ def add_addnode(connection, wallet_config_file):
 '''
 def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False, use_reindex=False):
     # Restart the daemon
-    conx_str = '{}/polisd -daemon'.format(dir)
+    cmd = '{}/polisd -daemon'.format(dir)
     try:
         if use_reindex:
-            conx_str += ' -reindex'
+            cmd += ' -reindex'
         if wallet_dir != "" and use_wallet_dir :
-            conx_str += " --datadir=" + wallet_dir
-        result = connection.run(conx_str, hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+            cmd += " --datadir=" + wallet_dir
+        executeCmd(connection, cmd)
+
     except Exception as e :
-        logging.error('Could not start  : {}'.format(conx_str), exc_info=e)
+        logging.error('Could not start  : {}'.format(cmd), exc_info=e)
 
 '''
 
@@ -282,19 +270,12 @@ def install_boostrap(connection, target_directory, cnx):
         wallet_conf_file = wallet_dir + default_wallet_conf_file
         # Clean up old wallet dir
         clean_up_wallet_dir(connection, wallet_dir)
-        result = connection.run("cd {}".format(wallet_dir), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        # Download bootstrap and
-        result = connection.run("wget http://wbs.cryptosharkspool.com/polis/bootstrap.zip", hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("unzip -o bootstrap.zip",hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = connection.run("rm -f bootstrap.zip",hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, "cd {}".format(wallet_dir))
+
+        # Download bootstrap and unzip it
+        executeCmd(connection, "wget http://wbs.cryptosharkspool.com/polis/bootstrap.zip",)
+        executeCmd(connection, "unzip -o bootstrap.zip")
+        executeCmd(connection, "rm -f bootstrap.zip")
         # Start the new daemon
         start_daemon(connection, target_directory, wallet_dir, use_wallet_dir, False)
 
