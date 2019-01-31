@@ -296,7 +296,6 @@ def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False, use_reind
 
 '''
 def install_boostrap(connection, target_directory, cnx):
-    global default_wallet_dir
     global default_wallet_conf_file
     # Stop the daemon if running
     stop_daemon(connection, target_directory)
@@ -304,15 +303,15 @@ def install_boostrap(connection, target_directory, cnx):
     wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
 
     for wallet_dir in wallet_dirs:
-        wallet_conf_file = wallet_dir + default_wallet_conf_file
         # Clean up old wallet dir
         clean_up_wallet_dir(connection, wallet_dir)
         executeCmd(connection, "cd {}".format(wallet_dir))
 
         # Download bootstrap and unzip it
-        executeCmd(connection, "wget http://wbs.cryptosharkspool.com/polis/bootstrap.zip",)
-        executeCmd(connection, "unzip -o bootstrap.zip")
-        executeCmd(connection, "rm -f bootstrap.zip")
+        executeCmd(connection, "wget http://wbs.cryptosharkspool.com/polis/bootstrap.zip -O {}/bootstrap.zip".format(wallet_dir))
+        executeCmd(connection, "unzip -o {}/bootstrap.zip -d {}".format(wallet_dir, wallet_dir))
+        executeCmd(connection, "mv -f {}/bootstrap/* {}".format(wallet_dir, wallet_dir))
+        executeCmd(connection, "rm -rf {}/bootstrap*".format(wallet_dir))
         # Start the new daemon
         start_daemon(connection, target_directory, wallet_dir, use_wallet_dir, False)
 
