@@ -48,7 +48,7 @@ class VPS:
     def actions(self, action, coin):
         try:
             # list of actions that are accepted
-            actions = {'clean_wallet':'rm -rf {}/{{blocks,peers.dat,chainstate}}'.format(coin.default_wallet_dir),
+            actions = {'clean_wallet':'rm -rf {}/{{blocks,peers.dat,chainstate}}'.format(self.wallet_directory),
                        'kill_daemon':'killall -9 {}'.format(coin.daemon),
                        'view_crontab':'crontab -l', 'ps':'ps -ef'}
 
@@ -77,7 +77,7 @@ class VPS:
             self.connection.put("Polis/"+coin.version_to_upload)
             logging.info("Uploaded {}".format(coin.version_to_upload))
             self.connection.put(coin.scripts["local_path"]+coin.scripts["upgrade"])
-            cmd = "/bin/bash {} {} {} {} {} \"{}\"".format(coin.scripts["upgrade"], coin.cli, coin.default_dir, coin.daemon, coin.default_wallet_dir, coin.addnode)
+            cmd = "/bin/bash {} {} {} {} {} \"{}\"".format(coin.scripts["upgrade"], coin.cli, self.installed_folder, coin.daemon, self.wallet_directory, coin.addnode)
             logging.info("Uploaded {}".format(coin.scripts["local_path"]+coin.scripts["upgrade"]))
             result = self.connection.run(cmd, hide=False)
 
@@ -103,9 +103,9 @@ class VPS:
             upload = "Polis/"+coin.version_to_upload
             self.connection.put(upload)
             result = self.connection.run("mkdir {} && mkdir {} && tar zxvf {} -C {}".format(config["WalletsFolder"],
-                                                                                         coin.default_dir,
+                                                                                         self.installed_folder,
                                                                                          coin.version_to_upload,
-                                                                                         coin.default_dir), hide=False)
+                                                                                         self.installed_folder), hide=False)
 
             return result
         except UnexpectedExit as e:
@@ -140,7 +140,7 @@ class VPS:
             coin_name = "polis"
             self.connection.put(daemonconf)
             cmd = "/bin/bash {} {} {} {} {}".format(coin.scripts['confdaemon'], coin_name, coin.addnode,
-                                                     coin.default_dir, ip, pw)
+                                                    self.installed_folder, ip, pw)
             result = self.connection.run(cmd, hide=False)
             #should contain masternodeprivkey
             return result.stdout
@@ -154,8 +154,8 @@ class VPS:
         try:
             self.connection.put(coin.scripts["local_path"]+coin.scripts["watcher_cron"])
             logging.info('Uploaded watcher_cron.sh')
-            cmd = "/bin/bash {} {} {} {} {}".format(coin.scripts["watcher_cron"], coin.name, coin.default_dir, coin.daemon,
-                                                 coin.default_wallet_dir)
+            cmd = "/bin/bash {} {} {} {} {}".format(coin.scripts["watcher_cron"], coin.name, self.installed_folder,
+                                                    coin.daemon, self.wallet_directory)
             result = self.connection.run(cmd, hide=False)
             if result.stdout == '' and result.stderr == '':
                 return "{'status':'success'}"
@@ -171,8 +171,8 @@ class VPS:
     def install_sentinel(self, coin):
         try:
             self.connection.put(coin.scripts["local_path"]+coin.scripts["sentinel_setup"])
-            cmd = "/bin/bash {} {} {} {}".format(coin.scripts["sentinel_setup"], coin.sentinel_git, coin.default_dir,
-                                                                   coin.coin_name)
+            cmd = "/bin/bash {} {} {} {}".format(coin.scripts["sentinel_setup"], coin.sentinel_git,
+                                                 self.installed_folder, coin.coin_name)
             result = self.connection.run(cmd, hide=False)
             logging.info('Uploaded sentinel_setup.sh:\n {}'.format(result))
             return result
