@@ -345,6 +345,7 @@ def main():
     parser.add_argument('-installBootstrap', action='store_true', help='install the bootstrap')
     parser.add_argument('-deployConfig', action='store_true', help='deploy polis.conf')
     parser.add_argument('-startDaemon', action='store_true', help='start the daemon')
+    parser.add_argument('-masternodeConf', action='store_true', help='output the masternode.conf content')
     args = parser.parse_args()
 
     # Load configuration file
@@ -354,6 +355,8 @@ def main():
     # Global settings
     default_wallet_dir = config["Polis"]["default_wallet_dir"]
     default_wallet_conf_file = config["Polis"]["default_wallet_conf_file"]
+
+    masternode_conf = ""
 
     for cnx in config["masternodes"]:
         # noinspection PyBroadException
@@ -371,6 +374,12 @@ def main():
             target_directory = cnx["destination_folder"]
 
             wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
+
+            if args.masternodeConf and "private_key" in cnx :
+                masternode_conf += "{} {}:24126 {} {}\n".format(cnx["connection_string"],
+                                                          utils.get_ip_from_connection_string(cnx["connection_string"]),
+                                                                cnx["private_key"],
+                                                                cnx["outputs"])
 
             if args.startDaemon :
                 for wallet_dir in wallet_dirs:
@@ -446,6 +455,9 @@ def main():
 
         except Exception as e:
             logging.error('Could not upgrade {}'.format(cnx["connection_string"]), exc_info=e)
+
+    if args.masternodeConf:
+        print(masternode_conf)
 
 
 if __name__ == '__main__':
