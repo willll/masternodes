@@ -24,6 +24,43 @@ def executeCmd(connection, cmd, hide=True) :
 '''
 
 '''
+def get_wallet_dir(cnx) :
+    wallet_dirs = []
+    use_wallet_dir = False
+    if "wallet_directories" in cnx:
+        for wallet in cnx["wallet_directories"]:
+            wallet_dirs.append(wallet["wallet_directory"])
+        use_wallet_dir = True
+    elif "wallet_directory" in cnx:
+        wallet_dirs = [cnx["wallet_directory"]]
+    else:
+        wallet_dirs = [ default_wallet_dir ]
+    return (wallet_dirs, use_wallet_dir)
+
+
+'''
+
+'''
+def get_masternode_status(connection, dir, wallet_dir="", use_wallet_dir=False):
+    # Restart the daemon
+    cmd = '{}/polis-cli'.format(dir)
+    result = ""
+    try:
+        if wallet_dir != "" and use_wallet_dir:
+            cmd += " --datadir=" + wallet_dir
+        cmd += " masternode status"
+        result = connection.run(cmd, hide=True)
+        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+        logging.info(msg.format(result))
+        result = json.load(result)["status"]
+
+    except Exception as e:
+        logging.error('Could not start  : {}'.format(cmd), exc_info=e)
+
+    return result
+'''
+
+'''
 def is_sentinel_installed(connection):
     is_installed = False
     try:
@@ -282,22 +319,6 @@ def install_boostrap(connection, target_directory, cnx):
 '''
 
 '''
-def get_wallet_dir(cnx) :
-    wallet_dirs = []
-    use_wallet_dir = False
-    if "wallet_directories" in cnx:
-        for wallet in cnx["wallet_directories"]:
-            wallet_dirs.append(wallet["wallet_directory"])
-        use_wallet_dir = True
-    elif "wallet_directory" in cnx:
-        wallet_dirs = [cnx["wallet_directory"]]
-    else:
-        wallet_dirs = [ default_wallet_dir ]
-    return (wallet_dirs, use_wallet_dir)
-
-'''
-
-'''
 def reindex_masternode(connection, target_directory, cnx):
     global default_wallet_dir
     global default_wallet_conf_file
@@ -346,6 +367,7 @@ def main():
     parser.add_argument('-deployConfig', action='store_true', help='deploy polis.conf')
     parser.add_argument('-startDaemon', action='store_true', help='start the daemon')
     parser.add_argument('-masternodeConf', action='store_true', help='output the masternode.conf content')
+    parser.add_argument('-masternodeStatus', action='store_true', help='output the masternode status')
     args = parser.parse_args()
 
     # Load configuration file
@@ -357,6 +379,7 @@ def main():
     default_wallet_conf_file = config["Polis"]["default_wallet_conf_file"]
 
     masternode_conf = ""
+    masternode_status = ""
 
     for cnx in config["masternodes"]:
         # noinspection PyBroadException
@@ -374,6 +397,11 @@ def main():
             target_directory = cnx["destination_folder"]
 
             wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
+
+            if args.masternodeStatus:
+                for wallet_dir in wallet_dirs:
+                    masternode_status += "{} : {}\n".format(cnx["connection_string"],
+                                                            get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
 
             if args.masternodeConf and "private_key" in cnx :
                 masternode_conf += "{} {}:24126 {} {}\n".format(cnx["connection_string"],
@@ -458,6 +486,9 @@ def main():
 
     if args.masternodeConf:
         print(masternode_conf)
+
+    if args.masternodeStatus:
+        print(masternode_status)
 
 
 if __name__ == '__main__':
