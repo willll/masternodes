@@ -4,6 +4,7 @@ import sys
 import json
 import string
 import secrets
+import os
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit
 import argparse
@@ -14,6 +15,11 @@ import utils
 '''
 default_wallet_dir = ""
 default_wallet_conf_file = ""
+
+def executeCmd(connection, cmd, hide=True) :
+    result = connection.run(cmd, hide=hide)
+    msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
+    logging.info(msg.format(result))
 
 '''
 
@@ -112,15 +118,11 @@ def install_vps(connection, swap_supported = False):
         if swap_supported :
             logging.info("Create SWAP file !")
             for cmd in cmds_create_swap :
-                result = connection.run('{}'.format(cmd), hide=True)
-                msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-                logging.info(msg.format(result))
+                executeCmd(connection, '{}'.format(cmd))
 
         logging.info("Download dependencies !")
         for cmd in cmds_apt_get:
-            result = connection.run('{}'.format(cmd), hide=True)
-            msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-            logging.info(msg.format(result))
+            executeCmd(connection, '{}'.format(cmd))
     except Exception as e:
         logging.error('Could not install vps', exc_info=e)
 
@@ -130,9 +132,7 @@ def install_vps(connection, swap_supported = False):
 def is_directory_exists(connection, dir):
     isExists = False
     try:
-        result = connection.run('[[ -d {} ]]'.format(dir), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, '[[ -d {} ]]'.format(dir))
         isExists = True;
     except UnexpectedExit:
         logging.info('{} does not exist !'.format(dir))
@@ -144,9 +144,7 @@ def is_directory_exists(connection, dir):
 def create_polis_directory(connection, dir):
     exists = is_directory_exists(connection, dir)
     if not exists :
-        result = connection.run('mkdir -p {}'.format(dir), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, 'mkdir -p {}'.format(dir))
     return exists
 
 '''
@@ -156,13 +154,9 @@ def stop_daemon(connection, dir):
     # Clean up th mess
     try:
         cnt = 0
-        result = connection.run('{}/polis-cli stop'.format(dir), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, '{}/polis-cli stop'.format(dir))
         while cnt < 120: # Wait for the daemon to stop for 2 minutes
-            result = connection.run('ps -A | grep polisd', hide=True)
-            msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-            logging.debug(msg.format(result))
+            executeCmd(connection, 'ps -A | grep polisd')
             time.sleep(1) # Wait one second before retry
             cnt = cnt + 1
     except UnexpectedExit:
@@ -195,31 +189,33 @@ def transfer_new_version(connection, dir, sourceFolder, versionToUpload):
 '''
 
 '''
-def create_wallet_dir(connection, PUBLICIP, PRIVATEKEY):
-    exists = is_directory_exists(connection, dir)
+def create_wallet_dir(connection, wallet_dir, PUBLICIP, PRIVATEKEY, delete_before=False):
+    if delete_before :
+        executeCmd(connection, 'rm -rf {}'.format(wallet_dir))
+    exists = is_directory_exists(connection, wallet_dir)
     if not exists:
-        result = connection.run('mkdir -p {}'.format(dir), hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        executeCmd(connection, 'mkdir -p {}'.format(wallet_dir))
         # Transfer the inflated to file to the target
-        result = connection.put('./polis.conf', dir)
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        polis_conf_tpl = dir_path + '/polis.conf'
+        result = connection.put(polis_conf_tpl, wallet_dir)
         msg = "Transfered {0} to {1}"
-        logging.debug(msg.format('./polis.conf', connection))
+        logging.debug(msg.format(polis_conf_tpl, wallet_dir))
         # Setup the config file
-        polis_conf = dir + 'polis.conf'
+        polis_conf = wallet_dir + 'polis.conf'
         # source : https://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python/23728630#23728630
         RPCUSER = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
-        result = connection.run('sed - i \'s/<RPCUSER>/{}/g\' {}'.format(RPCUSER, polis_conf), hide=True)
+        result = connection.run('sed -i \'s/<RPCUSER>/{}/g\' {}'.format(RPCUSER, polis_conf), hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         RPCPASSWORD = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
-        result = connection.run('sed - i \'s/<RPCPASSWORD>/{}/g\' {}'.format(RPCPASSWORD, polis_conf), hide=True)
+        result = connection.run('sed -i \'s/<RPCPASSWORD>/{}/g\' {}'.format(RPCPASSWORD, polis_conf), hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
-        result = connection.run('sed - i \'s/<PUBLICIP>/{}/g\' {}'.format(PUBLICIP, polis_conf), hide=True)
+        result = connection.run('sed -i \'s/<PUBLICIP>/{}/g\' {}'.format(PUBLICIP, polis_conf), hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
-        result = connection.run('sed - i \'s/<PRIVATEKEY>/{}/g\' {}'.format(PRIVATEKEY, polis_conf), hide=True)
+        result = connection.run('sed -i \'s/<PRIVATEKEY>/{}/g\' {}'.format(PRIVATEKEY, polis_conf), hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
     return exists
@@ -305,17 +301,7 @@ def install_boostrap(connection, target_directory, cnx):
     # Stop the daemon if running
     stop_daemon(connection, target_directory)
 
-    wallet_dirs = []
-
-    use_wallet_dir = False
-
-    if "wallet_directories" in cnx:
-        for wallet in cnx["wallet_directories"]:
-            wallet_dirs.append(wallet["wallet_directory"])
-        use_wallet_dir = True
-
-    else:
-        wallet_dirs = [default_wallet_dir]
+    wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
 
     for wallet_dir in wallet_dirs:
         wallet_conf_file = wallet_dir + default_wallet_conf_file
@@ -328,19 +314,30 @@ def install_boostrap(connection, target_directory, cnx):
         result = connection.run("wget https://github.com/cryptosharks131/Polis/releases/download/v1.4.8.1/bootstrap.zip", hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
-        result = connection.run(
-            "unzip bootstrap.zip",
-            hide=True)
+        result = connection.run("unzip -o bootstrap.zip",hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
-        result = connection.run(
-            "rm bootstrap.zip",
-            hide=True)
+        result = connection.run("rm -f bootstrap.zip",hide=True)
         msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
         logging.info(msg.format(result))
         # Start the new daemon
         start_daemon(connection, target_directory, wallet_dir, use_wallet_dir, False)
 
+'''
+
+'''
+def get_wallet_dir(cnx) :
+    wallet_dirs = []
+    use_wallet_dir = False
+    if "wallet_directories" in cnx:
+        for wallet in cnx["wallet_directories"]:
+            wallet_dirs.append(wallet["wallet_directory"])
+        use_wallet_dir = True
+    elif "wallet_directory" in cnx:
+        wallet_dirs = [cnx["wallet_directory"]]
+    else:
+        wallet_dirs = [ default_wallet_dir ]
+    return (wallet_dirs, use_wallet_dir)
 
 '''
 
@@ -351,17 +348,7 @@ def reindex_masternode(connection, target_directory, cnx):
     # Stop the daemon if running
     stop_daemon(connection, target_directory)
 
-    wallet_dirs = []
-
-    use_wallet_dir = False
-
-    if "wallet_directories" in cnx:
-        for wallet in cnx["wallet_directories"]:
-            wallet_dirs.append(wallet["wallet_directory"])
-        use_wallet_dir = True
-
-    else:
-        wallet_dirs = [ default_wallet_dir ]
+    wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
 
     for wallet_dir in wallet_dirs:
         wallet_conf_file = wallet_dir + default_wallet_conf_file
@@ -398,7 +385,8 @@ def main():
     parser.add_argument('-addNodes', action='store_true', help='edit the config file to add addnode entries')
     parser.add_argument('-onlyReindex', action='store_true', help='only reindex the masternodes')
     parser.add_argument('-onlyInstallVPS', action='store_true', help='only install the VPSs')
-    parser.add_argument('-InstallBootstrap', action='store_true', help='only install the VPSs')
+    parser.add_argument('-installBootstrap', action='store_true', help='only install the bootstrap')
+    parser.add_argument('-deployConfig', action='store_true', help='deploy polis.conf')
     args = parser.parse_args()
 
     # Load configuration file
@@ -435,9 +423,21 @@ def main():
                 else:
                     logging.info('{} Already installed'.format(cnx["connection_string"]))
 
-            elif args.InstallBootstrap :
+            elif args.installBootstrap :
                 install_boostrap(connection, target_directory, cnx)
                 logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
+
+            elif args.deployConfig :
+                wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
+
+                for wallet_dir in wallet_dirs:
+                    wallet_conf_file = wallet_dir + default_wallet_conf_file
+                    create_wallet_dir(connection, wallet_dir,
+                                      utils.get_ip_from_connection_string(cnx["connection_string"]),
+                                      cnx["private_key"], True)
+                    if args.addNodes:
+                        add_addnode(connection, wallet_conf_file)
+                logging.info('{} Has been successfully configured'.format(cnx["connection_string"]))
 
             else:
                 # Install VPS
@@ -453,21 +453,15 @@ def main():
                 # Transfer File to remote directory
                 transfer_new_version(connection, target_directory, config["SourceFolder"], config["VersionToUpload"])
 
-                wallet_dirs = []
-                use_wallet_dir = False
-
-                if "wallet_directories" in cnx :
-                    for wallet in cnx["wallet_directories"]:
-                        wallet_dirs.append( wallet["wallet_directory"] )
-                    use_wallet_dir = True
-                else:
-                    wallet_dirs = [ default_wallet_dir ]
+                wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
 
                 for wallet_dir in wallet_dirs:
                     wallet_conf_file = wallet_dir+default_wallet_conf_file
 
                     if not is_directory_exists(connection, wallet_dir) :
-                        create_wallet_dir(connection, get_ip_from_connection_string(cnx["connection_string"]), cnx["private_key"])
+                        create_wallet_dir(connection, wallet_dir,
+                                          utils.get_ip_from_connection_string(cnx["connection_string"]),
+                                          cnx["private_key"])
 
                     # Clean up old wallet dir
                     clean_up_wallet_dir(connection, wallet_dir)
