@@ -184,7 +184,7 @@ class VPS:
     '''
     async def async_cli(self, action, coin):
         try:
-            cmd = f"{self.installed_folder}/{coin.cli} --datadir={self.wallet_directory} {action}"
+            cmd = f"{self.installed_folder}/{coin.cli} -datadir={self.wallet_directory} {action}"
             logging.info(f"Attempting to execute command from masternode object: {cmd}")
             '''
             need to have a threadpool and throw this in there and await the result
@@ -201,7 +201,7 @@ class VPS:
 
     def kill_daemon(self,coin):
         try:
-            kill =f"{self.installed_folder}/{coin.cli} --datadir={self.wallet_directory} stop"
+            kill =f"{self.installed_folder}/{coin.cli} -datadir={self.wallet_directory} stop"
             result = self.connection.run(kill, hide=False)
             return result.stdout
         except UnexpectedExit as e:
@@ -215,7 +215,7 @@ class VPS:
 
     def daemon_action(self, coin, reindex = 0):
         try:
-            cmd = f"{self.installed_folder}/{coin.daemon} --datadir={self.wallet_directory}"
+            cmd = f"{self.installed_folder}/{coin.daemon} -datadir={self.wallet_directory}"
             if reindex == 1:
                 cmd += " -reindex"
             result = self.connection.run(cmd, hide=False)
