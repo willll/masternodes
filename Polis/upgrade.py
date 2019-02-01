@@ -20,6 +20,7 @@ def executeCmd(connection, cmd, hide=True) :
     result = connection.run(cmd, hide=hide)
     msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
     logging.info(msg.format(result))
+    return result
 
 '''
 
@@ -49,9 +50,7 @@ def get_masternode_status(connection, dir, wallet_dir="", use_wallet_dir=False):
         if wallet_dir != "" and use_wallet_dir:
             cmd += " --datadir=" + wallet_dir
         cmd += " masternode status"
-        result = connection.run(cmd, hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        result = executeCmd(connection, cmd)
         result = json.load(result)["status"]
 
     except Exception as e:
@@ -65,9 +64,7 @@ def is_sentinel_installed(connection):
     is_installed = False
     try:
         # Search for Polis/sentinel in crontable
-        result = connection.run('crontab -l | grep -c "Polis/sentinel"', hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        result = executeCmd(connection, 'crontab -l | grep -c "Polis/sentinel"')
         if result.stdout == '1\n' :
             is_installed = True
     except UnexpectedExit:
@@ -100,9 +97,7 @@ def is_vps_installed(connection):
     is_installed = False
     try:
         # Search for libdb4.8-dev package,
-        result = connection.run('dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev | grep -c "install ok installed"', hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
+        result = executeCmd(connection, 'dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev | grep -c "install ok installed"')
         if result.stdout == '1\n' :
             is_installed = True
     except UnexpectedExit:
@@ -173,9 +168,11 @@ def stop_daemon(connection, dir):
         cnt = 0
         executeCmd(connection, '{}/polis-cli stop'.format(dir))
         while cnt < 120: # Wait for the daemon to stop for 2 minutes
-            executeCmd(connection, 'ps -A | grep polisd')
+            executeCmd(connection, 'ps -A | grep [p]olisd')
             time.sleep(1) # Wait one second before retry
             cnt = cnt + 1
+        # Ok at this ppint polisd is still running, enough !
+        executeCmd(connection, 'killall -9 polisd')
     except UnexpectedExit:
         logging.info('{} does not run !'.format('polisd'))
 
