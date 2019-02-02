@@ -270,7 +270,7 @@ def main():
     parser.add_argument('-startDaemon', action='store_true', help='start the daemon')
     parser.add_argument('-masternodeConf', action='store_true', help='output the masternode.conf content')
     parser.add_argument('-masternodeStatus', action='store_true', help='output the masternode status')
-    parser.add_argument('-listMasternodes', action='store_true', help='output the masternode list with there respecive IDs')
+    parser.add_argument('-masternodeDiagnostic', action='store_true', help='output a diagnotic')
     args = parser.parse_args()
 
     init(args)
@@ -286,7 +286,12 @@ def main():
     masternode_conf = ""
     masternode_status = ""
 
+    connection_string_max_length = utils.maxStringsLength(config["masternodes"])
+
+    masternode_index = -1
+
     for cnx in config["masternodes"]:
+        masternode_index += 1
         # noinspection PyBroadException
         try :
             kwargs = {}
@@ -303,15 +308,12 @@ def main():
 
             wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
 
-            if args.listMasternodes:
-                for wallet_dir in wallet_dirs:
-                    masternode_status += "{} :\t\t{}\n".format(cnx["connection_string"],
-                                                            info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
-
             if args.masternodeStatus:
+                f = "{0:<4}: {1:<%d}: {2}\n" % (connection_string_max_length + 1)
                 for wallet_dir in wallet_dirs:
-                    masternode_status += "{0:>15} : {1}\n".format(cnx["connection_string"],
-                                                            info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
+                    masternode_status += f.format(masternode_index,
+                                                  cnx["connection_string"],
+                                                  info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
 
             if args.masternodeConf and "private_key" in cnx :
                 masternode_conf += "{0:>15} {}:24126 {1} {2}\n".format(cnx["connection_string"],

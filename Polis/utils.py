@@ -4,6 +4,15 @@ import logging
 '''
 
 '''
+def maxStringsLength(masternode) :
+    result = 0
+    for mn in masternode :
+        result = max(result, len(mn["connection_string"]))
+    return result
+
+'''
+
+'''
 def executeCmd(connection, cmd, hide=True) :
     result = connection.run(cmd, hide=hide)
     msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
