@@ -44,15 +44,20 @@ class VPS:
             logging.error('Could not close connection')
             return 'failed to close connection'
 
-    def actions(self, action, coin):
+    def actions(self, action, coin, param = ''):
         try:
+            if param != '' and type type(param) is int:
+                pause_tab = f"* {param} * * * crontab -r && crontab /tmp/ctab"
+
             # list of actions that are accepted
             actions = {"clean_wallet": f"rm -rf {self.wallet_directory}/{{blocks,peers.dat,chainstate}}",
                        "kill_daemon": f"killall -9 {coin.daemon}",
+                       "pause_crontab": f"crontab -l > /tmp/ctab && crontab -r && echo {pause_tab} > /tmp/pt && crontab /tmp/pt ",
                        "view_crontab": "crontab -l",
                        "unlock_wallet": f"rm -f {self.wallet_directory}/.lock",
                        "is_daemon_up": f"pidof {coin.daemon}",
-                       "ps": "ps -ef"}
+                       "ps": "ps -ef",
+                       "bs":f"cd {self.wallet_directory} && wget -q {param}"}
 
             result = self.connection.run(actions[action], hide=False)
 
@@ -60,6 +65,19 @@ class VPS:
         except Exception as e :
             logging.error(f"Problem in actions method for {action}", exc_info=e)
             return "{'status':'restart'}"
+
+    '''
+    Use bootstrap url to download bootstrap
+    '''
+    def bootstrap(self, bs, coin):
+        self.action('pause_crontab', coin, 5)
+        self.action('kill_daemon', coin)
+        self.action('clean_wallet', coin)
+        self.action('bs', coin, bs )
+        result = self.daemon_action(coin)
+        return result
+
+
 
     '''
     check file's hash, useful to check if a script is correct
