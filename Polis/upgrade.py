@@ -191,11 +191,15 @@ def install_boostrap(connection, target_directory, cnx):
         clean_up_wallet_dir(connection, wallet_dir)
         utils.executeCmd(connection, "cd {}".format(wallet_dir))
 
-        # Download bootstrap and unzip it
-        utils.executeCmd(connection, "wget http://wbs.cryptosharkspool.com/polis/bootstrap.zip -O {}/bootstrap.zip".format(wallet_dir))
-        utils.executeCmd(connection, "unzip -o {}/bootstrap.zip -d {}".format(wallet_dir, wallet_dir))
-        utils.executeCmd(connection, "cp -rf {}/bootstrap/* {}".format(wallet_dir, wallet_dir))
-        utils.executeCmd(connection, "rm -rf {}/bootstrap*".format(wallet_dir))
+        # Download bootstrap 1.4.8-1 and unzip it
+        #utils.executeCmd(connection, "wget http://wbs.cryptosharkspool.com/polis/bootstrap.zip -O {}/bootstrap.zip".format(wallet_dir))
+        #utils.executeCmd(connection, "unzip -o {}/bootstrap.zip -d {}".format(wallet_dir, wallet_dir))
+        #utils.executeCmd(connection, "cp -rf {}/bootstrap/* {}".format(wallet_dir, wallet_dir))
+        #utils.executeCmd(connection, "rm -rf {}/bootstrap*".format(wallet_dir))
+        # Download bootstrap 1.4.9
+        utils.executeCmd(connection,
+                         "wget http://explorer.polispay.org/images/bootstrap.dat -O {}/bootstrap.dat".format(
+                             wallet_dir))
         # Start the new daemon
         start_daemon(connection, target_directory, wallet_dir, use_wallet_dir, False)
 
