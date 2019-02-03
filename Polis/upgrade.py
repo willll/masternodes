@@ -45,13 +45,13 @@ def get_wallet_dir(cnx) :
 
 '''
 def is_directory_exists(connection, dir):
-    isExists = False
+    is_exists = False
     try:
         utils.executeCmd(connection, '[[ -d {} ]]'.format(dir))
-        isExists = True;
+        is_exists = True;
     except UnexpectedExit:
         logging.info('{} does not exist !'.format(dir))
-    return isExists
+    return is_exists
 
 '''
 
@@ -149,7 +149,6 @@ def clean_up_config(connection, wallet_config_file, option):
     try:
         if wallet_config_file == "" :
             raise Exception('Missing wallet configuration file')
-        conx_str = ""
         if option == "clear addnode" :
             cmd = "sed -i '/^addnode/d' {}".format(wallet_config_file)
         elif option == "clear connection" :
@@ -179,9 +178,9 @@ def add_addnode(connection, wallet_config_file):
 '''
 
 '''
-def start_daemon(connection, dir, wallet_dir="", use_wallet_dir=False, use_reindex=False):
+def start_daemon(connection, directory, wallet_dir="", use_wallet_dir=False, use_reindex=False):
     # Restart the daemon
-    cmd = '{}/polisd -daemon'.format(dir)
+    cmd = '{}/polisd -daemon'.format(directory)
     try:
         if use_reindex:
             cmd += ' -reindex'
@@ -227,7 +226,6 @@ def reindex_masternode(connection, target_directory, cnx):
     wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
 
     for wallet_dir in wallet_dirs:
-        wallet_conf_file = wallet_dir + default_wallet_conf_file
         # Clean up old wallet dir
         clean_up_wallet_dir(connection, wallet_dir)
         # Start the new daemon
@@ -285,8 +283,7 @@ def main():
     default_wallet_dir = config["Polis"]["default_wallet_dir"]
     default_wallet_conf_file = config["Polis"]["default_wallet_conf_file"]
 
-    masternode_conf = ""
-    masternode_status = ""
+    masternode_output = ""
 
     connection_string_max_length = utils.maxStringsLength(config["masternodes"])
 
@@ -314,15 +311,18 @@ def main():
 
             wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
 
+            if args.masternodeDiagnostic :
+
+
             if args.masternodeStatus:
                 f = "{0:<4}: {1:<%d}: {2}\n" % (connection_string_max_length + 1)
                 for wallet_dir in wallet_dirs:
-                    masternode_status += f.format(masternode_index,
+                    masternode_output += f.format(masternode_index,
                                                   cnx["connection_string"],
                                                   info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
 
             if args.masternodeConf and "private_key" in cnx :
-                masternode_conf += "{0:>15} {}:24126 {1} {2}\n".format(cnx["connection_string"],
+                masternode_output += "{0:>15} {}:24126 {1} {2}\n".format(cnx["connection_string"],
                                                           utils.get_ip_from_connection_string(cnx["connection_string"]),
                                                           cnx["private_key"],
                                                           cnx["outputs"])
@@ -402,11 +402,8 @@ def main():
         except Exception as e:
             logging.error('Could not upgrade {}'.format(cnx["connection_string"]), exc_info=e)
 
-    if args.masternodeConf:
-        print(masternode_conf)
-
-    if args.masternodeStatus:
-        print(masternode_status)
+    if args.masternodeStatus or args.masternodeConf or args.masternodeDiagnostic :
+        print(masternode_output)
 
 
 if __name__ == '__main__':
