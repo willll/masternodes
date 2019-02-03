@@ -1,6 +1,7 @@
 from invoke.exceptions import UnexpectedExit
-from upgrade import executeCmd
+from utils import executeCmd
 import logging
+
 '''
 
 '''
@@ -14,6 +15,21 @@ def is_vps_installed(connection):
     except UnexpectedExit:
         logging.info('{} does not exist !'.format(dir))
     return is_installed
+
+'''
+
+'''
+def is_polis_installed(connection, ):
+    is_installed = False
+    try:
+        # Search for libdb4.8-dev package,
+        result = executeCmd(connection, '| grep -c "install ok installed"')
+        if result.stdout == '1\n' :
+            is_installed = True
+    except UnexpectedExit:
+        logging.info('{} does not exist !'.format(dir))
+    return is_installed
+
 
 '''
     BUG : Must be logged in root ! 

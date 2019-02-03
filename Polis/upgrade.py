@@ -41,23 +41,12 @@ def get_wallet_dir(cnx) :
         wallet_dirs = [ default_wallet_dir ]
     return (wallet_dirs, use_wallet_dir)
 
-'''
-
-'''
-def is_directory_exists(connection, dir):
-    is_exists = False
-    try:
-        utils.executeCmd(connection, '[[ -d {} ]]'.format(dir))
-        is_exists = True;
-    except UnexpectedExit:
-        logging.info('{} does not exist !'.format(dir))
-    return is_exists
 
 '''
 
 '''
 def create_polis_directory(connection, dir):
-    exists = is_directory_exists(connection, dir)
+    exists = utils.is_directory_exists(connection, dir)
     if not exists :
         utils.executeCmd(connection, 'mkdir -p {}'.format(dir))
     return exists
@@ -102,7 +91,7 @@ def transfer_new_version(connection, dir, sourceFolder, versionToUpload):
 def create_wallet_dir(connection, wallet_dir, PUBLICIP, PRIVATEKEY, delete_before=False):
     if delete_before :
         utils.executeCmd(connection, 'rm -rf {}'.format(wallet_dir))
-    exists = is_directory_exists(connection, wallet_dir)
+    exists = utils.is_directory_exists(connection, wallet_dir)
     if not exists:
         utils.executeCmd(connection, 'mkdir -p {}'.format(wallet_dir))
         # Transfer the inflated to file to the target
@@ -308,7 +297,11 @@ def main():
             wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
 
             if args.masternodeDiagnostic :
-
+                f = "{0:<4}: {1:<%d}: {2}\n" % (connection_string_max_length + 1)
+                for wallet_dir in wallet_dirs:
+                    masternode_output += f.format(masternode_index,
+                                                  cnx["connection_string"],
+                                                  info.get_masternode_diagnostic(connection, target_directory, wallet_dir, use_wallet_dir))
 
             if args.masternodeStatus:
                 f = "{0:<4}: {1:<%d}: {2}\n" % (connection_string_max_length + 1)
@@ -370,7 +363,7 @@ def main():
                 for wallet_dir in wallet_dirs:
                     wallet_conf_file = wallet_dir+default_wallet_conf_file
 
-                    if not is_directory_exists(connection, wallet_dir) :
+                    if not utils.is_directory_exists(connection, wallet_dir) :
                         create_wallet_dir(connection, wallet_dir,
                                           utils.get_ip_from_connection_string(cnx["connection_string"]),
                                           cnx["private_key"])
