@@ -85,9 +85,7 @@ def stop_daemon(connection, dir):
 def transfer_new_version(connection, dir, sourceFolder, versionToUpload):
     try:
         # Transfer the inflated to file to the target
-        result = connection.put('{}{}'.format(sourceFolder, versionToUpload), dir)
-        msg = "Transfered {0} to {1}"
-        logging.debug(msg.format(versionToUpload, connection))
+        utils.sendFile(connection, '{}{}'.format(sourceFolder, versionToUpload), dir)
         # deflate the file
         utils.executeCmd(connection, 'unzip -u -o {}/{} -d {}'.format(dir, versionToUpload, dir))
         # Delete the archive
@@ -110,9 +108,7 @@ def create_wallet_dir(connection, wallet_dir, PUBLICIP, PRIVATEKEY, delete_befor
         # Transfer the inflated to file to the target
         dir_path = os.path.dirname(os.path.realpath(__file__))
         polis_conf_tpl = dir_path + '/polis.conf'
-        result = connection.put(polis_conf_tpl, wallet_dir)
-        msg = "Transfered {0} to {1}"
-        logging.debug(msg.format(polis_conf_tpl, wallet_dir))
+        utils.sendFile(connection, polis_conf_tpl, wallet_dir)
         # Setup the config file
         polis_conf = wallet_dir + 'polis.conf'
         # source : https://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python/23728630#23728630
