@@ -116,10 +116,10 @@ def create_wallet_dir(connection, wallet_dir, PUBLICIP, PRIVATEKEY, delete_befor
         # Setup the config file
         polis_conf = wallet_dir + 'polis.conf'
         # source : https://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python/23728630#23728630
-        RPCUSER = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
-        utils.executeCmd(connection, 'sed -i \'s/<RPCUSER>/{}/g\' {}'.format(RPCUSER, polis_conf))
-        RPCPASSWORD = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
-        utils.executeCmd(connection, 'sed -i \'s/<RPCPASSWORD>/{}/g\' {}'.format(RPCPASSWORD, polis_conf))
+        rpcuser = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
+        utils.executeCmd(connection, 'sed -i \'s/<RPCUSER>/{}/g\' {}'.format(rpcuser, polis_conf))
+        rpcpassword = ''.join(secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
+        utils.executeCmd(connection, 'sed -i \'s/<RPCPASSWORD>/{}/g\' {}'.format(rpcpassword, polis_conf))
         utils.executeCmd(connection, 'sed -i \'s/<PUBLICIP>/{}/g\' {}'.format(PUBLICIP, polis_conf))
         utils.executeCmd(connection, 'sed -i \'s/<PRIVATEKEY>/{}/g\' {}'.format(PRIVATEKEY, polis_conf))
 
