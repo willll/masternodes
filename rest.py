@@ -39,7 +39,7 @@ def render_without_request(template_name, **template_vars):
 
 
 '''
-Sub routes pertaining to polis-cli actions
+Sub routes pertaining to polisd actions
 '''
 with app.subroute("/daemon") as daemon:
     '''
@@ -75,16 +75,21 @@ with app.subroute("/daemon") as daemon:
             mnlist += "</select>\n"
             return mnlist+ "<p><input type=submit value=start></form>"
 
+    @daemon.route('/launch/bootstraped/<int:mn_idx>/<url:bootstrap>')
+    def daemon_bootstrap_start(request, mnidx, bs):
+        coin = Polis(config['Polis'])
+        vps = VPS(config["masternodes"][mnidx]), coin)
+        result = vps.bootstrap(bs, coin)
+        return result
+
     '''
     REST endpoint to launch polisd on given server
     TODO:
         It would be useful to have some feedback to the front end as to the status
         maybe a websocket update of getinfo and mnsync status.
     '''
-    @daemon.route('/launch', methods=['GET'])
-    def daemon_masternode_start(request):
-        mn_idx = int(request.args.get(b'mnidx', [0])[0])
-        reindex = int(request.args.get(b'reindex', [0])[0])
+    @daemon.route('/launch/<int:mn_idx>/<int:reindex>/', methods=['GET'])
+    def daemon_masternode_start(request, mn_idx, reindex):
         coin = Polis(config['Polis'])
 
         vps = VPS(config["masternodes"][mn_idx], coin)
