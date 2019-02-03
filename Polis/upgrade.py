@@ -1,3 +1,4 @@
+# system imports
 import logging
 import time
 import sys
@@ -5,10 +6,16 @@ import json
 import string
 import secrets
 import os
+
+# third party imports
 from fabric import Connection
 from invoke.exceptions import UnexpectedExit
+
+# project imports
 import argparse
 import utils
+import info
+import sentinel
 
 '''
     Globals
@@ -16,10 +23,6 @@ import utils
 default_wallet_dir = ""
 default_wallet_conf_file = ""
 
-def executeCmd(connection, cmd, hide=True) :
-    result = connection.run(cmd, hide=hide)
-    msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-    logging.info(msg.format(result))
 
 '''
 
@@ -36,112 +39,6 @@ def get_wallet_dir(cnx) :
     else:
         wallet_dirs = [ default_wallet_dir ]
     return (wallet_dirs, use_wallet_dir)
-
-
-'''
-
-'''
-def get_masternode_status(connection, dir, wallet_dir="", use_wallet_dir=False):
-    # Restart the daemon
-    cmd = '{}/polis-cli'.format(dir)
-    result = ""
-    try:
-        if wallet_dir != "" and use_wallet_dir:
-            cmd += " --datadir=" + wallet_dir
-        cmd += " masternode status"
-        result = connection.run(cmd, hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        result = json.load(result)["status"]
-
-    except Exception as e:
-        logging.error('Could not start  : {}'.format(cmd), exc_info=e)
-
-    return result
-'''
-
-'''
-def is_sentinel_installed(connection):
-    is_installed = False
-    try:
-        # Search for Polis/sentinel in crontable
-        result = connection.run('crontab -l | grep -c "Polis/sentinel"', hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        if result.stdout == '1\n' :
-            is_installed = True
-    except UnexpectedExit:
-        logging.info('{} does not exist !'.format(dir))
-    return is_installed
-
-'''
-
-'''
-def install_sentinel(connection, wallet_dir):
-    try:
-        logging.info("Installing sentinel !")
-        executeCmd(connection, "apt-get install -y virtualenv")
-        executeCmd(connection, "cd {}".format(wallet_dir))
-        executeCmd(connection, "git clone https://github.com/polispay/sentinel.git")
-        executeCmd(connection, "virtualenv venv")
-        executeCmd(connection, "venv/bin/pip install -r requirements.txt",)
-        executeCmd(connection, "echo polis_conf={}polis.conf >> sentinel.conf".format(wallet_dir))
-        executeCmd(connection, "crontab -l > tempcron")
-        executeCmd(connection, "echo \"* * * * * cd {}/sentinel && ./venv/bin/python bin/sentinel.py 2>&1 >> sentinel-cron.log\" >> tempcron".format(wallet_dir))
-        executeCmd(connection, "crontab tempcron")
-        executeCmd(connection, "rm tempcron")
-    except Exception as e:
-        logging.error('Could not install vps', exc_info=e)
-
-'''
-
-'''
-def is_vps_installed(connection):
-    is_installed = False
-    try:
-        # Search for libdb4.8-dev package,
-        result = connection.run('dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev | grep -c "install ok installed"', hide=True)
-        msg = "Ran {0.command!r} on {0.connection.host}, got stdout:\n{0.stdout}"
-        logging.info(msg.format(result))
-        if result.stdout == '1\n' :
-            is_installed = True
-    except UnexpectedExit:
-        logging.info('{} does not exist !'.format(dir))
-    return is_installed
-
-'''
-    BUG : Must be logged in root ! 
-    TODO : add an interactive shell to ask user for credentials
-'''
-def install_vps(connection, swap_supported = False):
-    try:
-        cmds_create_swap = [    "touch /var/swap.img",
-                                "chmod 600 /var/swap.img",
-                                "dd if=/dev/zero of=/var/swap.img bs=1024k count=2000",
-                                "mkswap /var/swap.img",
-                                "swapon /var/swap.img",
-                                "echo \"/var/swap.img none swap sw 0 0\" >> /etc/fstab" ]
-
-        cmds_apt_get = [        "apt-get update -y",
-                                "apt-get upgrade -y",
-                                "apt-get dist-upgrade -y",
-                                "apt-get install nano htop git -y",
-                                "apt-get install build-essential libtool autotools-dev automake pkg-config libssl-dev libevent-dev bsdmainutils software-properties-common -y",
-                                "apt-get install libboost-all-dev -y",
-                                "add-apt-repository ppa:bitcoin/bitcoin -y",
-                                "apt-get update -y",
-                                "apt-get install libdb4.8-dev libdb4.8++-dev -y" ]
-
-        if swap_supported :
-            logging.info("Create SWAP file !")
-            for cmd in cmds_create_swap :
-                executeCmd(connection, '{}'.format(cmd))
-
-        logging.info("Download dependencies !")
-        for cmd in cmds_apt_get:
-            executeCmd(connection, '{}'.format(cmd))
-    except Exception as e:
-        logging.error('Could not install vps', exc_info=e)
 
 '''
 
@@ -173,9 +70,11 @@ def stop_daemon(connection, dir):
         cnt = 0
         executeCmd(connection, '{}/polis-cli stop'.format(dir))
         while cnt < 120: # Wait for the daemon to stop for 2 minutes
-            executeCmd(connection, 'ps -A | grep polisd')
+            executeCmd(connection, 'ps -A | grep [p]olisd')
             time.sleep(1) # Wait one second before retry
             cnt = cnt + 1
+        # Ok at this ppint polisd is still running, enough !
+        executeCmd(connection, 'killall -9 polisd')
     except UnexpectedExit:
         logging.info('{} does not run !'.format('polisd'))
 
@@ -336,13 +235,18 @@ def reindex_masternode(connection, target_directory, cnx):
 '''
 
 '''
-def init():
+def init(args):
     # create logger
+    debug_level = logging.INFO
+
+    if args.masternodeStatus or args.masternodeConf :
+        debug_level = logging.ERROR
+
     logger = logging.getLogger('logger')
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler('debug.log')
     fh.setLevel(logging.DEBUG)
-    ch = logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    ch = logging.basicConfig(stream=sys.stdout, level=debug_level)
     logger.addHandler(fh)
     logger.addHandler(ch)
 
@@ -352,7 +256,6 @@ def init():
 def main():
     global default_wallet_dir
     global default_wallet_conf_file
-    init()
 
     # CLI arguments
     parser = argparse.ArgumentParser(description='Masternodes upgrade script')
@@ -367,7 +270,10 @@ def main():
     parser.add_argument('-startDaemon', action='store_true', help='start the daemon')
     parser.add_argument('-masternodeConf', action='store_true', help='output the masternode.conf content')
     parser.add_argument('-masternodeStatus', action='store_true', help='output the masternode status')
+    parser.add_argument('-listMasternodes', action='store_true', help='output the masternode list with there respecive IDs')
     args = parser.parse_args()
+
+    init(args)
 
     # Load configuration file
     file = open(args.config)
@@ -397,16 +303,21 @@ def main():
 
             wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
 
+            if args.listMasternodes:
+                for wallet_dir in wallet_dirs:
+                    masternode_status += "{} :\t\t{}\n".format(cnx["connection_string"],
+                                                            info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
+
             if args.masternodeStatus:
                 for wallet_dir in wallet_dirs:
-                    masternode_status += "{} : {}\n".format(cnx["connection_string"],
-                                                            get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
+                    masternode_status += "{0:>15} : {1}\n".format(cnx["connection_string"],
+                                                            info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
 
             if args.masternodeConf and "private_key" in cnx :
-                masternode_conf += "{} {}:24126 {} {}\n".format(cnx["connection_string"],
+                masternode_conf += "{0:>15} {}:24126 {1} {2}\n".format(cnx["connection_string"],
                                                           utils.get_ip_from_connection_string(cnx["connection_string"]),
-                                                                cnx["private_key"],
-                                                                cnx["outputs"])
+                                                          cnx["private_key"],
+                                                          cnx["outputs"])
 
             if args.startDaemon :
                 for wallet_dir in wallet_dirs:
