@@ -16,7 +16,7 @@ def is_sentinel_installed(connection):
 
     except UnexpectedExit:
         try:
-            # else look for the wallet directory
+            # Else look for the wallet directory
             result = executeCmd(connection, 'crontab -l | grep -c ".poliscore/sentinel"')
             if result.stdout == '1\n':
                 is_installed = True

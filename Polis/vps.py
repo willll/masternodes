@@ -1,5 +1,5 @@
 from invoke.exceptions import UnexpectedExit
-from utils import executeCmd
+from utils import executeCmd, is_file_exists
 import logging
 
 '''
@@ -19,15 +19,22 @@ def is_vps_installed(connection):
 '''
 
 '''
-def is_polis_installed(connection, ):
+def is_polis_installed(connection, dir):
+    return is_file_exists(connection, "{}/{}".format(dir, 'polisd'))
+
+'''
+
+'''
+def is_monitoring_script_installed(connection):
     is_installed = False
     try:
-        # Search for libdb4.8-dev package,
-        result = executeCmd(connection, '| grep -c "install ok installed"')
+        # Search for Polis/sentinel in crontable
+        result = executeCmd(connection, 'crontab -l | grep -c "polischk.sh"')
         if result.stdout == '1\n' :
             is_installed = True
+
     except UnexpectedExit:
-        logging.info('{} does not exist !'.format(dir))
+        logging.info('Monitoring script is not installed !')
     return is_installed
 
 

@@ -1,7 +1,7 @@
 import json
 from utils import executeCmd
 from sentinel import is_sentinel_installed
-from vps import is_vps_installed
+from vps import is_vps_installed, is_polis_installed, is_monitoring_script_installed
 import logging
 
 
@@ -36,13 +36,18 @@ def get_masternode_diagnostic(connection, dir, wallet_dir="", use_wallet_dir=Fal
     result = ""
     try:
         f = '{0:<15} : {1}\n'
+        # First check if the VPS is installed properly (WIP)
         if not is_vps_installed(connection) :
             result += f.format('vps', 'not installed')
+        # Check if polisd is there
+        if not is_polis_installed(connection, dir):
+            result += f.format('polisd', 'not installed')
+
         #BUG : should be checked by wallet, not by VPS !
         if not is_sentinel_installed(connection) :
             result += f.format('sentinel', 'not installed')
-
-
+        if not is_monitoring_script_installed(connection):
+            result += f.format('monitoring script', 'not installed')
         # end of diagnostics
         if result == "" :
             result = "OK"
