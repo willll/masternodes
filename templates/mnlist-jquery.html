@@ -137,6 +137,13 @@
 
 <script type=text/javascript>
 
+
+            var ws = new WebSocket("ws://127.0.0.1:5431/")
+            ws.onmessage = function (event) {
+                var message = event.data
+                $('#output').append("Received: "+ message)
+            };
+
 var BLOCKHEIGHT = 0
     /*
         Filtering select code:

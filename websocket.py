@@ -5,12 +5,12 @@ from autobahn.twisted.websocket import WebSocketServerProtocol
 
 class MyServerProtocol(WebSocketServerProtocol):
 
-   def onMessage(self, payload, isBinary):
-      ## echo back message verbatim
-      self.sendMessage(payload, isBinary)
+    def onMessage(self, payload, isBinary):
+        ## echo back message verbatim
+        self.sendMessage(payload, isBinary)
 
 
-   def onConnect(self, request):
+    def onConnect(self, request):
         '''
         In this callback you can do things like
 
