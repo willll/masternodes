@@ -75,12 +75,14 @@ with app.subroute("/daemon") as daemon:
             mnlist += "</select>\n"
             return mnlist+ "<p><input type=submit value=start></form>"
 
+    '''
     @daemon.route('/launch/bootstraped/<int:mn_idx>/<url:bootstrap>')
     def daemon_bootstrap_start(request, mnidx, bs):
         coin = Polis(config['Polis'])
         vps = VPS(config["masternodes"][mnidx]), coin)
         result = vps.bootstrap(bs, coin)
         return result
+    '''
 
     '''
     REST endpoint to launch polisd on given server
