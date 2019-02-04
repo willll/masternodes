@@ -15,8 +15,10 @@ app = Klein()
 '''
 @app.route('/')
 def hello_world(request):
-    return 'Hello, World! <a href="/mns/list">Masternodes</a>' \
-           '<a href="/daemon/startpolis">Start Polis</a> <a href=''>Masternodes</a> '
+    redirect = f"/mns/list"
+    request.redirect(redirect)
+    #return 'Hello, World! <a href="/mns/list">Masternodes</a>' \
+    #       '<a href="/daemon/startpolis">Start Polis</a> <a href=''>Masternodes</a> '
 
 
 '''
@@ -322,6 +324,14 @@ with app.subroute("/mns") as mns:
         request.redirect(f"/mns/cli/action/{mnidx}/mnss")
         return None
 
+    '''
+    Nonblocking masternode status request using await
+    '''
+    @mns.route('/cli/<int:mnidx>/wallet/cleanup', methods=['POST'])
+    def cli_masternode_status(request, mnidx):
+        redirect = f"/mns/cli/action/{mnidx}/mnstat"
+        request.redirect(redirect)
+        return None
 
     '''
     Nonblocking masternode status request using await

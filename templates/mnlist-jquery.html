@@ -96,6 +96,7 @@
                 <option id='restart_{{ item.idx }}'>Restart</option>
                 <option id='reindex_{{ item.idx }}'>Reindex</option>
                 <option id='upgrade_{{ item.idx }}'>upgrade mn</option>
+                <option id='cleanwallet_{{ item.idx }}'>clean up wallet</option>
             </select>
         </td>
         <td>
@@ -259,6 +260,15 @@ var BLOCKHEIGHT = 0
     });
 
 
+    function cleanUpWallet(id)
+    {
+        rest = '/sys/cron/clean/'+id
+        console.log("Cleaning up wallet : "+rest)
+        $.getJSON(rest, {}, function(data) {
+            $("#output").append(data.result);
+        })
+    }
+
     function uniqCrontab(id)
     {
         rest = '/sys/cron/clean/'+id
@@ -366,6 +376,10 @@ var BLOCKHEIGHT = 0
             }
             else if (id.match("^cleancron_")) {
                 console.log("Restarting mn :"+ id);
+                uniqCrontab(id);
+            }
+            else if (id.match("^cleanwallet_")) {
+                console.log("cleaning up mn :"+ id);
                 uniqCrontab(id);
             }
             else if (id.match("^reindex")) {
