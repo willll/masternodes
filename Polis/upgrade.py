@@ -336,7 +336,7 @@ def main():
                 else:
                     logging.info('{} Already installed'.format(cnx["connection_string"]))
 
-            if args.installBootstrap :
+            if args.installBootstrap and not args.deploy :
                 install_boostrap(connection, target_directory, cnx)
                 logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
 
@@ -383,16 +383,19 @@ def main():
                     if args.addNodes :
                         add_addnode(connection, wallet_conf_file)
 
-                    # Start the new daemon
-                    start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
+                    if args.installBootstrap :
+                        install_boostrap(connection, target_directory, cnx)
+                    else :
+                        # Start the new daemon
+                        start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
 
                     # install sentinel
-                    if not sentinel.is_sentinel_installed(connection):
+                    if not sentinel.is_sentinel_installed(connection) :
                         sentinel.install_sentinel(connection, wallet_dir)
 
                 logging.info('{} Has been successfully upgraded'.format(cnx["connection_string"]))
 
-        except Exception as e:
+        except Exception as e :
             logging.error('Could not upgrade {}'.format(cnx["connection_string"]), exc_info=e)
 
     if args.masternodeStatus or args.masternodeConf or args.masternodeDiagnostic :
