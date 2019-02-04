@@ -13,8 +13,16 @@ def is_sentinel_installed(connection):
         result = executeCmd(connection, 'crontab -l | grep -c "Polis/sentinel"')
         if result.stdout == '1\n' :
             is_installed = True
+
     except UnexpectedExit:
-        logging.info('{} does not exist !'.format(dir))
+        try:
+            # else look for the wallet directory
+            result = executeCmd(connection, 'crontab -l | grep -c ".poliscore/sentinel"')
+            if result.stdout == '1\n':
+                is_installed = True
+
+        except UnexpectedExit:
+            logging.info('{} does not exist !'.format(dir))
     return is_installed
 
 '''
@@ -36,7 +44,7 @@ def install_sentinel(connection, wallet_dir):
         except Exception as e:
             logging.warning('crontab is empty, create a new one', exc_info=e)
             executeCmd(connection, "touch {}/tempcron".format(sentinel_path))
-        executeCmd(connection, "echo \"* * * * * cd {}/sentinel && ./venv/bin/python bin/sentinel.py 2>&1 >> sentinel-cron.log\" >> {}/tempcron".format(wallet_dir,sentinel_path))
+        executeCmd(connection, "echo \"* * * * * cd {}sentinel && ./venv/bin/python bin/sentinel.py 2>&1 >> sentinel-cron.log\" >> {}/tempcron".format(wallet_dir,sentinel_path))
         executeCmd(connection, "crontab {}/tempcron".format(sentinel_path))
         executeCmd(connection, "rm {}/tempcron".format(sentinel_path))
     except Exception as e:

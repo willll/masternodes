@@ -227,7 +227,7 @@ def init(args):
     # create logger
     debug_level = logging.INFO
 
-    if args.masternodeStatus or args.masternodeConf :
+    if args.masternodeStatus or args.masternodeConf or args.masternodeDiagnostic :
         debug_level = logging.ERROR
 
     logger = logging.getLogger('logger')
@@ -309,7 +309,7 @@ def main():
                                                   info.get_masternode_diagnostic(connection, target_directory, wallet_dir, use_wallet_dir))
 
             if args.masternodeStatus:
-                f = "{0:<4}: {1:<%d}: {2}\n" % (connection_string_max_length + 1)
+                f = "{0:<4}: {1:<%d}:\n{2}" % (connection_string_max_length + 1)
                 for wallet_dir in wallet_dirs:
                     masternode_output += f.format(masternode_index,
                                                   cnx["connection_string"],

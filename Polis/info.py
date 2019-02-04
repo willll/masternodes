@@ -36,14 +36,16 @@ def get_masternode_diagnostic(connection, dir, wallet_dir="", use_wallet_dir=Fal
     result = ""
     try:
         f = '{0:<15} : {1}\n'
-        if not vps.is_vps_installed(connection) :
+        if not is_vps_installed(connection) :
             result += f.format('vps', 'not installed')
         #BUG : should be checked by wallet, not by VPS !
-        if not sentinel.is_sentinel_installed(connection) :
+        if not is_sentinel_installed(connection) :
             result += f.format('sentinel', 'not installed')
 
 
-
+        # end of diagnostics
+        if result == "" :
+            result = "OK"
 
     except Exception as e:
         logging.error('Bad response format : {}\n {}'.format(e, result))
