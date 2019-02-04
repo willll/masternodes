@@ -44,10 +44,10 @@ def is_directory_exists(connection, dir):
 def is_file_exists(connection, file):
     is_exists = False
     try:
-        executeCmd(connection, '[[ -f {} ]]'.format(file))
+        executeCmd(connection, '[[ -n {} ]]'.format(file))
         is_exists = True;
-    except UnexpectedExit:
-        logging.info('{} does not exist !'.format(file))
+    except UnexpectedExit as e :
+        logging.info('{} does not exist ! ({})'.format(file, e))
     return is_exists
 
 '''

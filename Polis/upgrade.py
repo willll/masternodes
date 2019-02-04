@@ -279,7 +279,7 @@ def main():
 
     masternode_index = -1
 
-    for cnx in config["masternodes"]:
+    for conf in config["masternodes"]:
         masternode_index += 1
         # noinspection PyBroadException
         try :
@@ -288,58 +288,59 @@ def main():
                 continue
 
             kwargs = {}
-            if "connection_certificate" in cnx :
-                kwargs['key_filename'] = cnx["connection_certificate"]
+            if "connection_certificate" in conf :
+                kwargs['key_filename'] = conf["connection_certificate"]
             else :
                 # Must be mutually excluded
-                if "connection_password" in cnx:
-                    kwargs['password'] = cnx["connection_password"]
+                if "connection_password" in conf:
+                    kwargs['password'] = conf["connection_password"]
 
-            connection = Connection(cnx["connection_string"], connect_timeout=30, connect_kwargs=kwargs)
+            connection = Connection(conf["connection_string"], connect_timeout=30, connect_kwargs=kwargs)
 
-            target_directory = cnx["destination_folder"]
+            target_directory = conf["destination_folder"]
 
-            wallet_dirs, use_wallet_dir = get_wallet_dir(cnx)
+            wallet_dirs, use_wallet_dir = get_wallet_dir(conf)
 
             if args.masternodeDiagnostic :
                 f = "{0:<4}: {1:<%d}: {2}\n" % (connection_string_max_length + 1)
                 for wallet_dir in wallet_dirs:
                     masternode_output += f.format(masternode_index,
-                                                  cnx["connection_string"],
+                                                  conf["connection_string"],
                                                   info.get_masternode_diagnostic(connection, target_directory, wallet_dir, use_wallet_dir))
 
             if args.masternodeStatus:
-                f = "{0:<4}: {1:<%d}:\n{2}" % (connection_string_max_length + 1)
+                f = "{0:<4}: {1:<%d}:\r\n{2}" % (connection_string_max_length + 1)
                 for wallet_dir in wallet_dirs:
                     masternode_output += f.format(masternode_index,
-                                                  cnx["connection_string"],
-                                                  info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
+                                                  conf["connection_string"],
+                                                  info.get_masternode_status(connection, config["masternodes"], target_directory, wallet_dir, use_wallet_dir))
 
-            if args.masternodeConf and "private_key" in cnx :
-                masternode_output += "{0:>15} {}:24126 {1} {2}\n".format(cnx["connection_string"],
-                                                          utils.get_ip_from_connection_string(cnx["connection_string"]),
-                                                          cnx["private_key"],
-                                                          cnx["outputs"])
+
+            if args.masternodeConf and "private_key" in conf :
+                masternode_output += "{0:>15} {}:24126 {1} {2}\n".format(conf["connection_string"],
+                                                          utils.get_ip_from_connection_string(conf["connection_string"]),
+                                                          conf["private_key"],
+                                                          conf["outputs"])
 
             if args.startDaemon :
                 for wallet_dir in wallet_dirs:
                     start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
-                    logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
+                    logging.info('{} Has been successfully reindexed'.format(conf["connection_string"]))
 
             if args.reindex :
-                reindex_masternode(connection, target_directory, cnx)
-                logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
+                reindex_masternode(connection, target_directory, conf)
+                logging.info('{} Has been successfully reindexed'.format(conf["connection_string"]))
 
             if args.installVPS :
                 if not vps.is_vps_installed(connection) :
                     vps.install_vps(connection)
-                    logging.info('{} Has been successfully installed'.format(cnx["connection_string"]))
+                    logging.info('{} Has been successfully installed'.format(conf["connection_string"]))
                 else:
-                    logging.info('{} Already installed'.format(cnx["connection_string"]))
+                    logging.info('{} Already installed'.format(conf["connection_string"]))
 
             if args.installBootstrap and not args.deploy :
-                install_boostrap(connection, target_directory, cnx)
-                logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
+                install_boostrap(connection, target_directory, conf)
+                logging.info('{} Has been successfully reindexed'.format(conf["connection_string"]))
 
             if args.installSentinel and not args.deploy:
                 for wallet_dir in wallet_dirs:
@@ -351,11 +352,11 @@ def main():
                 for wallet_dir in wallet_dirs:
                     wallet_conf_file = wallet_dir + default_wallet_conf_file
                     create_wallet_dir(connection, wallet_dir,
-                                      utils.get_ip_from_connection_string(cnx["connection_string"]),
-                                      cnx["private_key"], True)
+                                      utils.get_ip_from_connection_string(conf["connection_string"]),
+                                      conf["private_key"], True)
                     if args.addNodes:
                         add_addnode(connection, wallet_conf_file)
-                logging.info('{} Has been successfully configured'.format(cnx["connection_string"]))
+                logging.info('{} Has been successfully configured'.format(conf["connection_string"]))
 
             if args.deploy :
                 # Install VPS
@@ -376,8 +377,8 @@ def main():
 
                     if not utils.is_directory_exists(connection, wallet_dir) :
                         create_wallet_dir(connection, wallet_dir,
-                                          utils.get_ip_from_connection_string(cnx["connection_string"]),
-                                          cnx["private_key"])
+                                          utils.get_ip_from_connection_string(conf["connection_string"]),
+                                          conf["private_key"])
 
                     # Clean up old wallet dir
                     clean_up_wallet_dir(connection, wallet_dir)
@@ -391,7 +392,7 @@ def main():
                         add_addnode(connection, wallet_conf_file)
 
                     if args.installBootstrap :
-                        install_boostrap(connection, target_directory, cnx)
+                        install_boostrap(connection, target_directory, conf)
                     else :
                         # Start the new daemon
                         start_daemon(connection, target_directory, wallet_dir, use_wallet_dir)
@@ -400,10 +401,16 @@ def main():
                     if not sentinel.is_sentinel_installed(connection) :
                         sentinel.install_sentinel(connection, wallet_dir)
 
-                logging.info('{} Has been successfully upgraded'.format(cnx["connection_string"]))
+                logging.info('{} Has been successfully upgraded'.format(conf["connection_string"]))
 
         except Exception as e :
-            logging.error('Could not upgrade {}'.format(cnx["connection_string"]), exc_info=e)
+            logging.error('Could not upgrade {}'.format(conf["connection_string"]), exc_info=e)
+
+    if args.masternodeDiagnostic :
+        is_unique, duplicates = vps.is_genkey_unique(config)
+        if not is_unique :
+            masternode_output += "Found duplicate keys : {} and {}".format(duplicates[0], duplicates[1])
+
 
     if args.masternodeStatus or args.masternodeConf or args.masternodeDiagnostic :
         print(masternode_output)

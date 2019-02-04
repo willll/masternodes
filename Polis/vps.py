@@ -2,6 +2,26 @@ from invoke.exceptions import UnexpectedExit
 from utils import executeCmd, is_file_exists
 import logging
 
+
+
+'''
+
+'''
+def is_genkey_unique(config):
+    is_unique = True
+    duplicates = []
+    tmp = {}
+    for conf in config["masternodes"] :
+        if "private_key" in conf :
+            if tmp.get(conf["private_key"]) == None:
+                tmp[conf["private_key"]] = conf["connection_string"]
+            else :
+                duplicates.append(conf["connection_string"])
+                duplicates.append(tmp.get(conf["private_key"]))
+                is_unique = False
+                continue
+    return (is_unique, duplicates)
+
 '''
 
 '''
@@ -20,7 +40,7 @@ def is_vps_installed(connection):
 
 '''
 def is_polis_installed(connection, dir):
-    return is_file_exists(connection, "{}/{}".format(dir, 'polisd'))
+    return is_file_exists(connection, "{}{}".format(dir, 'polisd'))
 
 '''
 

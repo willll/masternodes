@@ -4,7 +4,6 @@ from sentinel import is_sentinel_installed
 from vps import is_vps_installed, is_polis_installed, is_monitoring_script_installed
 import logging
 
-
 def get_polisd_cmd(dir, wallet_dir="", use_wallet_dir=False):
     cmd = '{}/polis-cli'.format(dir)
     result = ""
@@ -28,14 +27,14 @@ def get_masternode_status(connection, dir, wallet_dir="", use_wallet_dir=False):
             logging.error('Bad response format, "status" not found : {}'.format(result))
 
     except Exception as e:
-        logging.error('Bad response format : {}\n {}'.format(e, result))
+        logging.error('Bad response format : {}\r\n {}'.format(e, result))
 
     return result
 
-def get_masternode_diagnostic(connection, dir, wallet_dir="", use_wallet_dir=False):
+def get_masternode_diagnostic(connection, config, dir, wallet_dir="", use_wallet_dir=False):
     result = ""
     try:
-        f = '{0:<15} : {1}\n'
+        f = '\r\n{0:<15} : {1}\r\n'
         # First check if the VPS is installed properly (WIP)
         if not is_vps_installed(connection) :
             result += f.format('vps', 'not installed')
