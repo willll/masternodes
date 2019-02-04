@@ -1,6 +1,6 @@
 
 from invoke.exceptions import UnexpectedExit
-from utils import executeCmd
+from utils import executeCmd, is_directory_exists
 import logging
 
 '''
@@ -23,15 +23,21 @@ def is_sentinel_installed(connection):
 def install_sentinel(connection, wallet_dir):
     try:
         logging.info("Installing sentinel !")
+        sentinel_path = wallet_dir + 'sentinel'
         executeCmd(connection, "apt-get install -y virtualenv")
-        executeCmd(connection, "cd {}".format(wallet_dir))
-        executeCmd(connection, "git clone https://github.com/polispay/sentinel.git")
-        executeCmd(connection, "virtualenv venv")
-        executeCmd(connection, "venv/bin/pip install -r requirements.txt",)
-        executeCmd(connection, "echo polis_conf={}polis.conf >> sentinel.conf".format(wallet_dir))
-        executeCmd(connection, "crontab -l > tempcron")
-        executeCmd(connection, "echo \"* * * * * cd {}/sentinel && ./venv/bin/python bin/sentinel.py 2>&1 >> sentinel-cron.log\" >> tempcron".format(wallet_dir))
-        executeCmd(connection, "crontab tempcron")
-        executeCmd(connection, "rm tempcron")
+        if is_directory_exists(connection, sentinel_path) :
+            executeCmd(connection, "rm -rf {}".format(sentinel_path))
+        executeCmd(connection, "git clone https://github.com/polispay/sentinel.git {}".format(sentinel_path))
+        executeCmd(connection, "virtualenv {}/venv".format(sentinel_path))
+        executeCmd(connection, "{}/venv/bin/pip install -r {}/requirements.txt".format(sentinel_path,sentinel_path))
+        executeCmd(connection, "echo polis_conf={}polis.conf >> {}/sentinel.conf".format(wallet_dir, sentinel_path))
+        try :
+            executeCmd(connection, "crontab -l > {}/tempcron".format(sentinel_path))
+        except Exception as e:
+            logging.warning('crontab is empty, create a new one', exc_info=e)
+            executeCmd(connection, "touch {}/tempcron".format(sentinel_path))
+        executeCmd(connection, "echo \"* * * * * cd {}/sentinel && ./venv/bin/python bin/sentinel.py 2>&1 >> sentinel-cron.log\" >> {}/tempcron".format(wallet_dir,sentinel_path))
+        executeCmd(connection, "crontab {}/tempcron".format(sentinel_path))
+        executeCmd(connection, "rm {}/tempcron".format(sentinel_path))
     except Exception as e:
         logging.error('Could not install vps', exc_info=e)

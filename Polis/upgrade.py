@@ -254,6 +254,7 @@ def main():
     parser.add_argument('-reindex', action='store_true', help='reindex the masternodes')
     parser.add_argument('-installVPS', action='store_true', help='install the VPSs')
     parser.add_argument('-installBootstrap', action='store_true', help='install the bootstrap')
+    parser.add_argument('-installSentinel', action='store_true', help='install sentinel')
     parser.add_argument('-deployConfig', action='store_true', help='deploy polis.conf')
     parser.add_argument('-startDaemon', action='store_true', help='start the daemon')
     parser.add_argument('-masternodeConf', action='store_true', help='output the masternode.conf content')
@@ -339,6 +340,12 @@ def main():
             if args.installBootstrap and not args.deploy :
                 install_boostrap(connection, target_directory, cnx)
                 logging.info('{} Has been successfully reindexed'.format(cnx["connection_string"]))
+
+            if args.installSentinel and not args.deploy:
+                for wallet_dir in wallet_dirs:
+                    # install sentinel
+                    if not sentinel.is_sentinel_installed(connection):
+                        sentinel.install_sentinel(connection, wallet_dir)
 
             if args.deployConfig :
                 for wallet_dir in wallet_dirs:
