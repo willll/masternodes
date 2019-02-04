@@ -119,6 +119,7 @@ with app.subroute("/scripts") as scripts:
         return VPS(config["masternodes"][mnidx], Polis(config['Polis'])).install_watcher(Polis(config["Polis"]))
 
 
+
 '''
 Manage the config file from web
 '''
@@ -262,6 +263,15 @@ with app.subroute("/sys") as sys:
         logging.info(f"Crontab requested got:\n{result}")
 
         return json.dumps(result)
+
+
+    '''
+    clean duplicate crontab entries
+    '''
+    @scripts.route('/sys/cron/clean/<int:mnidx>', methods=['GET'])
+    def crontab_clean(request, mnidx):
+        return VPS(config["masternodes"][mnidx], Polis(config['Polis'])).actions("clean_dupes_ctab")
+
 
     '''
     get processes running

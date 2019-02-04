@@ -57,7 +57,8 @@ class VPS:
                        "unlock_wallet": f"rm -f {self.wallet_directory}/.lock",
                        "is_daemon_up": f"pidof {coin.daemon}",
                        "ps": "ps -ef",
-                       "bs":f"cd {self.wallet_directory} && wget -q {param}"}
+                       "bs":f"cd {self.wallet_directory} && wget -q {param}",
+                       "clean_dupes_ctab": f"crontab -l | sort | uniq > /tmp/ctab && crontab /tmp/ctab"}
 
             result = self.connection.run(actions[action], hide=False)
 
