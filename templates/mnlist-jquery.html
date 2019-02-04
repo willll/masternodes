@@ -87,6 +87,7 @@
                 <option selected>None</option>
                 <option id='install_{{ item.idx }}'>Install watcher</option>
                 <option id='update_{{ item.idx }}'>Update status</option>
+                <option id='uniqcron_{{ item.idx }}'>Uniq crontab</option>
                 <option id='restart_{{ item.idx }}'>Restart</option>
                 <option id='reindex_{{ item.idx }}'>Reindex</option>
                 <option id='upgrade_{{ item.idx }}'>upgrade mn</option>
@@ -164,7 +165,7 @@ var BLOCKHEIGHT = 0
     }
     function installScript(id)
     {
-      mnix = id.split("_").pop()
+      mnidx = id.split("_").pop()
       rest = '/scripts/watcher/'+mnidx
       $.getJSON(rest, {}, function(data) {
           $("#status_"+mnidx).text(data);
@@ -245,12 +246,22 @@ var BLOCKHEIGHT = 0
         });
     });
     $('.getcron').bind('click', function(){
-        rest = '/sys/cron/read/'+$(this).attr('id').split("_")[1]
+        rest = '/sys/cron/read/'+$(this).attr('id').split("_").pop()
+        console.log("Fetching cron: "+rest)
         $.getJSON(rest, {}, function(data) {
             $("#output").append(data.result);
         })
     });
 
+
+    function uniqCrontab(id)
+    {
+        rest = '/sys/cron/clean/'+id
+        console.log("Cleaning cron: "+rest)
+        $.getJSON(rest, {}, function(data) {
+            $("#output").append(data.result);
+        })
+    }
 
     function upgradeMN(id)
     {
@@ -347,6 +358,10 @@ var BLOCKHEIGHT = 0
             else if (id.match("^restart_")) {
                 console.log("Restarting mn :"+ id);
                 restartMN(id, 0);
+            }
+            else if (id.match("^cleancron_")) {
+                console.log("Restarting mn :"+ id);
+                uniqCrontab(id);
             }
             else if (id.match("^reindex")) {
                 console.log("Reindexing : "+ id);
