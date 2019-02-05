@@ -4,6 +4,7 @@ from config import logging,config
 import secrets
 import string
 
+from twisted.internet.defer import returnValue
 
 class VPS:
     def __init__(self, masternode, coin):
@@ -199,10 +200,16 @@ class VPS:
         except Exception as e:
             logging.error(f"Could not do_action {self.masternode['connection_string']} : {e}", exc_info=e)
             return '{"status":"failed"}'
-    '''
-    eventually offer async_cli functions
-    '''
-    async def async_cli(self, action, coin):
+
+
+    def async_cli(self, action, coin):
+        '''
+        eventually offer async_cli functions
+
+        :param action:
+        :param coin:
+        :return:
+        '''
         try:
             cmd = f"{self.installed_folder}/{coin.cli} -datadir={self.wallet_directory} {action}"
             logging.info(f"Attempting to execute command from masternode object: {cmd}")

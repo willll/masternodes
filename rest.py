@@ -7,10 +7,18 @@ from coin import Coin,Polis
 from vps import VPS
 from config import config,logging
 from twisted.internet.defer import inlineCallbacks, returnValue, ensureDeferred
-from twisted.internet import threads
+from twisted.internet import threads, defer
 from twisted.web import server
-app = Klein()
+from autobahn.twisted.websocket import WebSocketServerFactory
+from autobahn.twisted.resource import WebSocketResource
 
+from websocket import MyServerProtocol
+
+
+app = Klein()
+factory = WebSocketServerFactory()
+factory.protocol = MyServerProtocol
+wsResource = WebSocketResource(factory)
 '''
 '''
 @app.route('/')
@@ -349,7 +357,7 @@ with app.subroute("/mns") as mns:
     mnidx: index of the masternode
     '''
     @mns.route('/cli/action/<int:mnidx>/<actidx>', methods=['GET'])
-    async def cli_mn_action(request, mnidx, actidx = 0):
+    def cli_mn_action(request, mnidx, actidx = 0):
         actions = {'mnstat': 'masternode status',
                    'gi': 'getinfo',
                    'mnss': 'mnsync status',
@@ -358,6 +366,8 @@ with app.subroute("/mns") as mns:
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
 
-        d = await vps.async_cli(actions[actidx], coin)
-        return d
+        d=threads.deferToThread(vps.async_cli, actions[actidx], coin)
+        res = yield d
+        factory.protocol.sendMessage(json.dumps(res))
+        return "{'status':'success'}"
 
