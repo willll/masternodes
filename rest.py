@@ -278,10 +278,9 @@ with app.subroute("/sys") as sys:
     '''
     clean duplicate crontab entries
     '''
-    @sys.route('/cron/clean/<int:mnidx>', methods=['GET'])
+    @scripts.route('/sys/cron/clean/<int:mnidx>', methods=['GET'])
     def crontab_clean(request, mnidx):
-        coin = Polis(config['Polis'])
-        return VPS(config["masternodes"][mnidx], coin).actions("clean_dupes_ctab", coin)
+        return VPS(config["masternodes"][mnidx], Polis(config['Polis'])).actions("clean_dupes_ctab")
 
 
     '''

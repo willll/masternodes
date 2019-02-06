@@ -19,31 +19,30 @@ DONE:
 '''
 
 
-from rest import app, wsResource, factory
+from rest import app
 from config import config
+from websocket import MyServerProtocol
 
 import sys
 
 from twisted.python import log
 from twisted.internet import reactor
 
-from twisted.web.wsgi import WSGIResource
-from autobahn.twisted.resource import WSGIRootResource
+from autobahn.twisted.websocket import WebSocketServerFactory
+
 
 if __name__ == '__main__':
 
     log.startLogging(sys.stdout)
 
+    factory = WebSocketServerFactory()
+    factory.protocol = MyServerProtocol
 
-    wsgiResource = WSGIResource(reactor, reactor.getThreadPool(), app)
-    rootResource = WSGIRootResource(wsgiResource, {b'ws': wsResource})
-
-    reactor.listenTCP(8080, factory)
+    reactor.listenTCP(5431, factory)
 
     app.run(host=config["Listen"]["host"], port=config["Listen"]["port"])
 
     reactor.run()
-
 
 
 

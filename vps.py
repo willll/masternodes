@@ -47,7 +47,6 @@ class VPS:
 
     def actions(self, action, coin, param = ''):
         try:
-            pause_tab = ''
             if param != '' and type(param) is int:
                 pause_tab = f"* {param} * * * crontab -r && crontab /tmp/ctab"
 

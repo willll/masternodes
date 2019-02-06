@@ -320,7 +320,7 @@ var BLOCKHEIGHT = 0
 
     function uniqCrontab(id)
     {
-        rest = '/sys/cron/clean/'+id.split("_").pop()
+        rest = '/sys/cron/clean/'+id
         console.log("Cleaning cron: "+rest)
         $.getJSON(rest, {}, function(data) {
             $("#output").append(data.result);
@@ -423,7 +423,7 @@ var BLOCKHEIGHT = 0
                 console.log("Restarting mn :"+ id);
                 restartMN(id, 0);
             }
-            else if (id.match("^uniqcron_")) {
+            else if (id.match("^cleancron_")) {
                 console.log("Restarting mn :"+ id);
                 uniqCrontab(id);
             }
