@@ -21,28 +21,9 @@ DONE:
 
 from rest import app
 from config import config
-from websocket import MyServerProtocol
-
-import sys
-
-from twisted.python import log
-from twisted.internet import reactor
-
-from autobahn.twisted.websocket import WebSocketServerFactory
-
 
 if __name__ == '__main__':
-
-    log.startLogging(sys.stdout)
-
-    factory = WebSocketServerFactory()
-    factory.protocol = MyServerProtocol
-
-    reactor.listenTCP(5431, factory)
-
     app.run(host=config["Listen"]["host"], port=config["Listen"]["port"])
-
-    reactor.run()
 
 
 

@@ -365,8 +365,6 @@ with app.subroute("/mns") as mns:
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
 
-        d=threads.deferToThread(vps.async_cli, actions[actidx], coin)
-        res = yield d
-        factory.protocol.sendMessage(json.dumps(res))
-        return "{'status':'success'}"
+        result = vps.async_cli( actions[actidx], coin)
+        return result
 
