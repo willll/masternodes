@@ -290,7 +290,7 @@ with app.subroute("/sys") as sys:
     @sys.route('/ps/<int:mnidx>')
     def ps(request, mnidx):
         coin = Polis(config["Polis"])
-        return returnValue(json.dumps({"result": VPS(config["masternodes"][mnidx], coin).actions("ps", coin).splitlines()}))
+        return json.dumps({"result": VPS(config["masternodes"][mnidx], coin).actions("ps", coin).splitlines()})
 
 '''
 Sub routes pertaining to polis-cli actions
@@ -366,8 +366,6 @@ with app.subroute("/mns") as mns:
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
 
-        d=threads.deferToThread(vps.async_cli, actions[actidx], coin)
-        res = yield d
-        factory.protocol.sendMessage(json.dumps(res))
+        result = vps.async_cli(actions[actidx], coin)
         return "{'status':'success'}"
 
