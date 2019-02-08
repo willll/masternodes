@@ -338,6 +338,7 @@ with app.subroute("/mns") as mns:
     '''
     @mns.route('/cli/<int:mnidx>/wallet/cleanup', methods=['POST'])
     def cli_masternode_status(request, mnidx):
+        # TODO !!!
         redirect = f"/mns/cli/action/{mnidx}/mnstat"
         request.redirect(redirect)
         return None
