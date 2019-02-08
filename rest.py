@@ -368,5 +368,5 @@ with app.subroute("/mns") as mns:
         vps = VPS(config["masternodes"][mnidx], coin)
 
         result = vps.async_cli(actions[actidx], coin)
-        return "{'status':'success'}"
+        return result
 
