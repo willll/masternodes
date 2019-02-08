@@ -4,7 +4,6 @@ from config import logging,config
 import secrets
 import string
 
-from twisted.internet.defer import returnValue
 
 class VPS:
     def __init__(self, masternode, coin):

@@ -22,27 +22,9 @@ DONE:
 from rest import app, wsResource, factory
 from config import config
 
-import sys
-
-from twisted.python import log
-from twisted.internet import reactor
-
-from twisted.web.wsgi import WSGIResource
-from autobahn.twisted.resource import WSGIRootResource
 
 if __name__ == '__main__':
-
-    log.startLogging(sys.stdout)
-
-
-    wsgiResource = WSGIResource(reactor, reactor.getThreadPool(), app)
-    rootResource = WSGIRootResource(wsgiResource, {b'ws': wsResource})
-
-    reactor.listenTCP(8080, factory)
-
     app.run(host=config["Listen"]["host"], port=config["Listen"]["port"])
-
-    reactor.run()
 
 
 
