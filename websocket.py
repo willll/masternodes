@@ -5,16 +5,16 @@ from autobahn.twisted.websocket import WebSocketServerProtocol
 
 class MyServerProtocol(WebSocketServerProtocol):
 
-    def onMessage(self, payload, isBinary):
-        ## echo back message verbatim
-        self.sendMessage(payload, isBinary)
-
+    def onMes
 
     def onConnect(self, request):
         '''
         In this callback you can do things like
 
-        checking or setting cookies or other HTTP headers
+        csage(self, payload, isBinary):
+        ## echo back message verbatim
+        self.sendMessage(payload, isBinary)
+hecking or setting cookies or other HTTP headers
         verifying the client IP address
         checking the origin of the WebSocket request
         negotiate WebSocket subprotocols

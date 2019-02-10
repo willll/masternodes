@@ -12,12 +12,12 @@ from twisted.web import server
 from autobahn.twisted.websocket import WebSocketServerFactory
 from autobahn.twisted.resource import WebSocketResource
 
-from websocket import MyServerProtocol
+#from websocket import MyServerProtocol
 
 
 app = Klein()
 factory = WebSocketServerFactory()
-factory.protocol = MyServerProtocol
+#factory.protocol = MyServerProtocol
 wsResource = WebSocketResource(factory)
 '''
 '''
