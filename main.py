@@ -19,7 +19,7 @@ DONE:
 '''
 
 
-from rest import app, wsResource, factory
+from rest import app
 from config import config
 
 
