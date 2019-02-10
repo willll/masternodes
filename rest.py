@@ -307,7 +307,10 @@ with app.subroute("/mns") as mns:
         preload = []
         idx=0
         for mn in config["masternodes"]:
-            preload.append({"cnx": mn["connection_string"], "idx": idx})
+            description = mn["connection_string"]
+            if "comment" in mn :
+                description = mn["comment"]
+            preload.append({"cnx": mn["connection_string"], "idx": idx, "description": description })
             idx += 1
 
         logging.info(f"Returning preloaded template for frontend {preload}")
