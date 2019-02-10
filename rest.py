@@ -6,19 +6,10 @@ import jinja2
 from coin import Coin,Polis
 from vps import VPS
 from config import config,logging
-from twisted.internet.defer import inlineCallbacks, returnValue, ensureDeferred
-from twisted.internet import threads, defer
-from twisted.web import server
-from autobahn.twisted.websocket import WebSocketServerFactory
-from autobahn.twisted.resource import WebSocketResource
 
-#from websocket import MyServerProtocol
 
 
 app = Klein()
-factory = WebSocketServerFactory()
-#factory.protocol = MyServerProtocol
-wsResource = WebSocketResource(factory)
 '''
 '''
 @app.route('/')
