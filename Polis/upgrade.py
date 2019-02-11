@@ -70,16 +70,17 @@ def main():
     parser.add_argument('-deploy', action='store_true', help='deploy a new version')
     parser.add_argument('-cleanConfig', action='store_true', help='clean up to config files')
     parser.add_argument('-addNodes', action='store_true', help='edit the config file to add addnode entries')
-    parser.add_argument('-reindex', action='store_true', help='reindex the masternodes')
+    parser.add_argument('-r', '--reindex', action='store_true', help='reindex the masternodes')
     parser.add_argument('-installVPS', action='store_true', help='install the VPSs')
     parser.add_argument('-installBootstrap', action='store_true', help='install the bootstrap')
     parser.add_argument('-installSentinel', action='store_true', help='install sentinel')
     parser.add_argument('-deployConfig', action='store_true', help='deploy polis.conf')
-    parser.add_argument('-startDaemon', action='store_true', help='start the daemon')
+    parser.add_argument('-s', '--startDaemon', action='store_true', help='start the daemon')
     parser.add_argument('-masternodeConf', action='store_true', help='output the masternode.conf content')
-    parser.add_argument('-masternodeStatus', action='store_true', help='output the masternode status')
+    parser.add_argument('-ls','--masternodeStatus', action='store_true', help='output the masternode status')
     parser.add_argument('-masternodeDiagnostic', action='store_true', help='output diagnostics')
-    parser.add_argument('-l', '--masternodeList', nargs='+', type=int, help='output diagnostics')
+    parser.add_argument('-grep', '--masternodeList', nargs='+', type=int, help='filter mastenodes by id')
+    parser.add_argument('-mv', '--masternodeMove', nargs=2, type=int, help='move masternodes from one id to another')
     args = parser.parse_args()
 
     init(args)
@@ -130,11 +131,11 @@ def main():
                                                   info.get_masternode_diagnostic(connection, target_directory, wallet_dir, use_wallet_dir))
 
             if args.masternodeStatus:
-                f = "{0:<4}: {1:<%d}:\r\n{2}" % (connection_string_max_length + 1)
+                f = "\r\n{0:<4}: {1:<%d}:\r\n{2}" % (connection_string_max_length + 1)
                 for wallet_dir in wallet_dirs:
                     masternode_output += f.format(masternode_index,
                                                   conf["connection_string"],
-                                                  info.get_masternode_status(connection, config["masternodes"], target_directory, wallet_dir, use_wallet_dir))
+                                                  info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
 
 
             if args.masternodeConf and "private_key" in conf :
