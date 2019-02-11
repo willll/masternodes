@@ -25,7 +25,7 @@ default_wallet_conf_file = ""
 '''
 
 '''
-def get_wallet_dir(cnx) :
+def get_wallet_dir(cnx):
     wallet_dirs = []
     use_wallet_dir = False
     if "wallet_directories" in cnx:
@@ -101,15 +101,15 @@ def main():
     for conf in config["masternodes"]:
         masternode_index += 1
         # noinspection PyBroadException
-        try :
+        try:
 
             if args.masternodeList and masternode_index not in args.masternodeList:
                 continue
 
             kwargs = {}
-            if "connection_certificate" in conf :
+            if "connection_certificate" in conf:
                 kwargs['key_filename'] = conf["connection_certificate"]
-            else :
+            else:
                 # Must be mutually excluded
                 if "connection_password" in conf:
                     kwargs['password'] = conf["connection_password"]
@@ -122,7 +122,7 @@ def main():
 
             polis = Polis(connection, target_directory)
 
-            if args.masternodeDiagnostic :
+            if args.masternodeDiagnostic:
                 f = "{0:<4}: {1:<%d}: {2}\n" % (connection_string_max_length + 1)
                 for wallet_dir in wallet_dirs:
                     masternode_output += f.format(masternode_index,
@@ -143,23 +143,23 @@ def main():
                                                           conf["private_key"],
                                                           conf["outputs"])
 
-            if args.startDaemon :
+            if args.startDaemon:
                 for wallet_dir in wallet_dirs:
                     polis.start_daemon(wallet_dir, use_wallet_dir)
                     logging.info('{} Has been successfully reindexed'.format(conf["connection_string"]))
 
-            if args.reindex :
+            if args.reindex:
                 polis.reindex_masternode(conf)
                 logging.info('{} Has been successfully reindexed'.format(conf["connection_string"]))
 
-            if args.installVPS :
-                if not vps.is_vps_installed(connection) :
+            if args.installVPS:
+                if not vps.is_vps_installed(connection):
                     vps.install_vps(connection)
                     logging.info('{} Has been successfully installed'.format(conf["connection_string"]))
                 else:
                     logging.info('{} Already installed'.format(conf["connection_string"]))
 
-            if args.installBootstrap and not args.deploy :
+            if args.installBootstrap and not args.deploy:
                 polis.install_boostrap(conf)
                 logging.info('{} Has been successfully reindexed'.format(conf["connection_string"]))
 
@@ -169,7 +169,7 @@ def main():
                     if not sentinel.is_sentinel_installed(connection):
                         sentinel.install_sentinel(connection, wallet_dir)
 
-            if args.deployConfig :
+            if args.deployConfig:
                 for wallet_dir in wallet_dirs:
                     wallet_conf_file = wallet_dir + default_wallet_conf_file
                     polis.create_wallet_dir(wallet_dir,
@@ -179,9 +179,9 @@ def main():
                         polis.add_addnode(wallet_conf_file)
                 logging.info('{} Has been successfully configured'.format(conf["connection_string"]))
 
-            if args.deploy :
+            if args.deploy:
                 # Install VPS
-                if not vps.is_vps_installed(connection) :
+                if not vps.is_vps_installed(connection):
                     vps.install_vps(connection)
 
                 # Create directory if does not exist
@@ -196,7 +196,7 @@ def main():
                 for wallet_dir in wallet_dirs:
                     wallet_conf_file = wallet_dir+default_wallet_conf_file
 
-                    if not utils.is_directory_exists(connection, wallet_dir) :
+                    if not utils.is_directory_exists(connection, wallet_dir):
                         polis.create_wallet_dir(wallet_dir,
                                           utils.get_ip_from_connection_string(conf["connection_string"]),
                                           conf["private_key"])
@@ -205,35 +205,35 @@ def main():
                     polis.clean_up_wallet_dir(wallet_dir)
 
                     # Clean up the config file
-                    if args.cleanConfig :
+                    if args.cleanConfig:
                         polis.clean_up_config(wallet_conf_file, "clear addnode")
 
                     # Add addnode in the config file
-                    if args.addNodes :
+                    if args.addNodes:
                         polis.add_addnode(wallet_conf_file)
 
-                    if args.installBootstrap :
+                    if args.installBootstrap:
                         polis.install_boostrap(conf)
-                    else :
+                    else:
                         # Start the new daemon
                         polis.start_daemon(wallet_dir, use_wallet_dir)
 
                     # install sentinel
-                    if not sentinel.is_sentinel_installed(connection) :
+                    if not sentinel.is_sentinel_installed(connection):
                         sentinel.install_sentinel(connection, wallet_dir)
 
                 logging.info('{} Has been successfully upgraded'.format(conf["connection_string"]))
 
-        except Exception as e :
+        except Exception as e:
             logging.error('Could not upgrade {}'.format(conf["connection_string"]), exc_info=e)
 
-    if args.masternodeDiagnostic :
+    if args.masternodeDiagnostic:
         is_unique, duplicates = vps.is_genkey_unique(config)
-        if not is_unique :
+        if not is_unique:
             masternode_output += "Found duplicate keys : {} and {}".format(duplicates[0], duplicates[1])
 
 
-    if args.masternodeStatus or args.masternodeConf or args.masternodeDiagnostic :
+    if args.masternodeStatus or args.masternodeConf or args.masternodeDiagnostic:
         print(masternode_output)
 
 
