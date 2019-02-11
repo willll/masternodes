@@ -17,13 +17,17 @@ class Polis:
         self.connection = connection
         self.target_directory = target_directory
 
+
 '''
-Daemon control 
+===== Daemon control =====
 '''
+
 
 '''
 Start the daemon
 '''
+
+
 def start_daemon(self, directory, wallet_dir="", use_wallet_dir=False, use_reindex=False):
     # Restart the daemon
     cmd = '{}/polisd -daemon'.format(directory)
@@ -37,9 +41,12 @@ def start_daemon(self, directory, wallet_dir="", use_wallet_dir=False, use_reind
     except Exception as e:
         logging.error('Could not start  : {}'.format(cmd), exc_info=e)
 
+
 '''
 Stop the daemon
 '''
+
+
 def stop_daemon(self, dir):
     # Clean up th mess
     try:
@@ -54,9 +61,12 @@ def stop_daemon(self, dir):
     except UnexpectedExit:
         logging.info('{} does not run !'.format('polisd'))
 
+
+
 '''
-Wallet FS operations
+===== Wallet FS operations =====
 '''
+
 
 '''
 Creates polis executables directory
@@ -71,7 +81,7 @@ def create_polis_directory(self, dir):
 '''
 Creates polis's wallet directory
 '''
-def create_wallet_dir(self, wallet_dir, PUBLICIP, PRIVATEKEY, delete_before=False):
+def create_wallet_dir(self, wallet_dir, public_ip, private_key, delete_before=False):
     if delete_before:
         utils.executeCmd(self.connection, 'rm -rf {}'.format(wallet_dir))
     exists = utils.is_directory_exists(self.connection, wallet_dir)
@@ -83,39 +93,41 @@ def create_wallet_dir(self, wallet_dir, PUBLICIP, PRIVATEKEY, delete_before=Fals
         utils.sendFile(self.connection, polis_conf_tpl, wallet_dir)
         # Setup the config file
         polis_conf = wallet_dir + 'polis.conf'
-        # source : https://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python/23728630#23728630
         rpcuser = ''.join(
             secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
         utils.executeCmd(self.connection, 'sed -i \'s/<RPCUSER>/{}/g\' {}'.format(rpcuser, polis_conf))
         rpcpassword = ''.join(
             secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
         utils.executeCmd(self.connection, 'sed -i \'s/<RPCPASSWORD>/{}/g\' {}'.format(rpcpassword, polis_conf))
-        utils.executeCmd(self.connection, 'sed -i \'s/<PUBLICIP>/{}/g\' {}'.format(PUBLICIP, polis_conf))
-        utils.executeCmd(self.connection, 'sed -i \'s/<PRIVATEKEY>/{}/g\' {}'.format(PRIVATEKEY, polis_conf))
+        utils.executeCmd(self.connection, 'sed -i \'s/<PUBLICIP>/{}/g\' {}'.format(public_ip, polis_conf))
+        utils.executeCmd(self.connection, 'sed -i \'s/<PRIVATEKEY>/{}/g\' {}'.format(private_key, polis_conf))
 
     return exists
 
-'''
 
 '''
-def transfer_new_version(self, dir, sourceFolder, versionToUpload):
+Puts the files
+'''
+
+
+def transfer_new_version(self, dir, source_folder, version_to_upload):
     try:
         # Transfer the inflated to file to the target
-        utils.sendFile(self.connection, '{}{}'.format(sourceFolder, versionToUpload), dir)
+        utils.sendFile(self.connection, '{}{}'.format(source_folder, version_to_upload), dir)
         # deflate the file
-        utils.executeCmd(self.connection, 'unzip -u -o {}/{} -d {}'.format(dir, versionToUpload, dir))
+        utils.executeCmd(self.connection, 'unzip -u -o {}/{} -d {}'.format(dir, version_to_upload, dir))
         # Delete the archive
-        utils.executeCmd(self.connection, 'rm {}/{}'.format(dir, versionToUpload))
+        utils.executeCmd(self.connection, 'rm {}/{}'.format(dir, version_to_upload))
         # fix permissions
         utils.executeCmd(self.connection, 'chmod 755 {}/*'.format(dir))
 
-    except Exception as e :
-        logging.error('Could not deploy : {}'.format(versionToUpload), exc_info=e)
+    except Exception as e:
+        logging.error('Could not deploy : {}'.format(version_to_upload), exc_info=e)
 
 
 
 '''
-
+Cleans up the wallet directory 
 '''
 def clean_up_wallet_dir(self, wallet_dir):
     resources_to_delete = [ "chainstate", "blocks", "peers.dat", "backups", "banlist.dat", "database", "db.log", "debug.log" ]
@@ -126,58 +138,65 @@ def clean_up_wallet_dir(self, wallet_dir):
         conx_str = 'rm -rf {}'.format(to_delete_str)
         utils.executeCmd(self.connection, conx_str)
 
-    except UnexpectedExit as e :
+    except UnexpectedExit as e:
         logging.error('Could not delete : {}'.format(to_delete_str), exc_info=e)
 
 
 '''
-Wallet configuration
+===== Wallet configuration =====
 '''
+
 
 '''
 Cleans up the polis.conf from previous configurations
 '''
+
+
 def clean_up_config(self, wallet_config_file, option):
     try:
-        if wallet_config_file == "" :
+        if wallet_config_file == "":
             raise Exception('Missing wallet configuration file')
-        if option == "clear addnode" :
+        if option == "clear addnode":
             cmd = "sed -i '/^addnode/d' {}".format(wallet_config_file)
-        elif option == "clear connection" :
+        elif option == "clear connection":
             cmd = "sed -i '/^connection/d' {}".format(wallet_config_file)
         else :
             raise Exception('Invalid option')
         utils.executeCmd(self.connection, cmd)
 
-    except UnexpectedExit as e :
+    except UnexpectedExit as e:
         logging.error('Could not clean up : {}'.format(wallet_config_file), exc_info=e)
+
 
 '''
 Adds node entries in polis.conf
 '''
 def add_addnode(self, wallet_config_file):
     try:
-        if wallet_config_file == "" :
+        if wallet_config_file == "":
             raise Exception('Missing wallet configuration file')
 
         cmd = "echo \"addnode=insight.polispay.org:24126\naddnode=explorer.polispay.org:24126\" >> {}".format(wallet_config_file)
         utils.executeCmd(self.connection, cmd)
 
-    except UnexpectedExit as e :
+    except UnexpectedExit as e:
         logging.error('Could not add addnode : {}'.format(wallet_config_file), exc_info=e)
 
+
 '''
-bootstrap
+===== bootstrap =====
 
 Note : needs to be adapted based on discord directives, make sure to unpack the file manually to understand
 its content/structure
 '''
 
+
 '''
 bootstrap installation
 '''
+
+
 def install_boostrap(self, cnx):
-    global default_wallet_conf_file
     # Stop the daemon if running
     self.stop_daemon(self.connection, self.target_directory)
 
@@ -200,16 +219,19 @@ def install_boostrap(self, cnx):
         # Start the new daemon
         self.start_daemon(self.connection, self.target_directory, wallet_dir, use_wallet_dir, False)
 
+
 '''
-Masternode controls
+===== Masternode controls =====
 '''
+
 
 '''
 Reindexes the masternode
 '''
+
+
 def reindex_masternode(self, cnx):
-    global default_wallet_dir
-    global default_wallet_conf_file
+
     # Stop the daemon if running
     self.stop_daemon(self.connection, self.target_directory)
 
@@ -220,4 +242,3 @@ def reindex_masternode(self, cnx):
         self.clean_up_wallet_dir(self.connection, wallet_dir)
         # Start the new daemon
         self.start_daemon(self.connection, self.target_directory, wallet_dir, use_wallet_dir, True)
-
