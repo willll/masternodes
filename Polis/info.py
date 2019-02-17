@@ -1,5 +1,5 @@
 import json
-from utils import executeCmd
+from utils import execute_command
 from sentinel import is_sentinel_installed
 from vps import is_vps_installed, is_polis_installed, is_monitoring_script_installed
 import logging
@@ -19,7 +19,7 @@ def get_masternode_status(connection, dir, wallet_dir="", use_wallet_dir=False):
     try:
         cmd = get_polisd_cmd(dir, wallet_dir, use_wallet_dir)
         cmd += " masternode status"
-        result = executeCmd(connection, cmd)
+        result = execute_command(connection, cmd)
         result = json.loads(result.stdout)
         if "status" in result :
             result = result["status"]

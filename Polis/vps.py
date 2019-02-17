@@ -1,11 +1,11 @@
 from invoke.exceptions import UnexpectedExit
-from utils import executeCmd, is_file_exists
+from utils import execute_command, is_file_exists
 import logging
 
 
 
 '''
-
+is_genkey_unique
 '''
 def is_genkey_unique(config):
     is_unique = True
@@ -22,34 +22,37 @@ def is_genkey_unique(config):
                 continue
     return (is_unique, duplicates)
 
-'''
 
+'''
+is_vps_installed
 '''
 def is_vps_installed(connection):
     is_installed = False
     try:
         # Search for libdb4.8-dev package,
-        result = executeCmd(connection, 'dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev | grep -c "install ok installed"')
+        result = execute_command(connection, 'dpkg-query -W --showformat=\'${Status}\n\' libdb4.8-dev | grep -c "install ok installed"')
         if result.stdout == '1\n' :
             is_installed = True
     except UnexpectedExit:
         logging.info('{} does not exist !'.format(dir))
     return is_installed
 
-'''
 
+'''
+is_polis_installed
 '''
 def is_polis_installed(connection, dir):
     return is_file_exists(connection, "{}{}".format(dir, 'polisd'))
 
-'''
 
+'''
+is_monitoring_script_installed
 '''
 def is_monitoring_script_installed(connection):
     is_installed = False
     try:
         # Search for Polis/sentinel in crontable
-        result = executeCmd(connection, 'crontab -l | grep -c "polischk.sh"')
+        result = execute_command(connection, 'crontab -l | grep -c "polischk.sh"')
         if result.stdout == '1\n' :
             is_installed = True
 
@@ -84,10 +87,10 @@ def install_vps(connection, swap_supported = False):
         if swap_supported :
             logging.info("Create SWAP file !")
             for cmd in cmds_create_swap :
-                executeCmd(connection, '{}'.format(cmd))
+                execute_command(connection, '{}'.format(cmd))
 
         logging.info("Download dependencies !")
         for cmd in cmds_apt_get:
-            executeCmd(connection, '{}'.format(cmd))
+            execute_command(connection, '{}'.format(cmd))
     except Exception as e:
         logging.error('Could not install vps', exc_info=e)
