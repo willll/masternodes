@@ -162,7 +162,7 @@ TODO:
     (eventually generate automatically here through request)
     - Runs script to update VPS, copy polis binary from local,
     generate priv key, install sentinel and crontab job, install
-    sscript to watch daemon every minute and relaunch it
+    cron task to watch daemon every minute and relaunch it
 '''
 @app.route('/create', methods=['POST', 'GET'])
 def create(request):

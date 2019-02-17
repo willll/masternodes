@@ -61,6 +61,26 @@ def is_file_exists(connection, file):
 
 
 '''
+is_file_exists
+'''
+
+
+def control_cron_service(connection, start = False):
+    cmd = "sudo /etc/init.d/cron "
+    try:
+        if start:
+            cmd += "start"
+        else :
+            cmd += "stop"
+
+        execute_command(connection, '{}'.format(cmd))
+        is_exists = True
+    except UnexpectedExit as e:
+        logging.info('could not execute : {} ({})'.format(cmd, e))
+
+
+
+'''
 max_string_length
 '''
 

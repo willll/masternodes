@@ -23,7 +23,7 @@ default_wallet_conf_file = ""
 
 
 '''
-
+get_wallet_dir
 '''
 def get_wallet_dir(cnx):
     wallet_dirs = []
@@ -60,30 +60,34 @@ def create_polis_connection(conf):
     polis = Polis(connection, target_directory)
     return polis, wallet_dirs, use_wallet_dir, connection
 
+
 '''
 Moves a masternode to another VPS
 '''
-def move_masternode(masternodeMove, config, configfilename):
+def move_masternode(args, config):
 
     cpt = 0
     source = 0
     destination = 0
-    for tmp in config:
-        if cpt == masternodeMove[0]:
+    for tmp in config["masternodes"]:
+        if cpt == args.masternodeMove[0]:
            source = tmp
-        if cpt == masternodeMove[1]:
+        if cpt == args.masternodeMove[1]:
            destination = tmp
         cpt+=1
 
     if source == 0 or destination == 0 :
-        logging.error('Could not move addnode {} to {}'.format(masternodeMove[0], masternodeMove[1]))
-        Exception('Bad mova arguments')
+        Exception('Bad move arguments')
 
     # Create source connection
     polis_source, source_wallet_dirs, source_use_wallet_dir, source_connection = create_polis_connection(source)
 
     # Create destination connection
     polis_destination, destination_wallet_dirs, destination_source_use_wallet_dir, destination_connection = create_polis_connection(destination)
+
+    # Stop the daemon watcher
+    utils.control_cron_service(source_connection, False)
+    utils.control_cron_service(destination_connection, False)
 
     polis_source.stop_daemon()
     polis_destination.stop_daemon()
@@ -95,42 +99,42 @@ def move_masternode(masternodeMove, config, configfilename):
     source["private_key"] = ""
     source["outputs"] = ""
 
-    for wallet_dir in source_wallet_dirs:
-        wallet_conf_file = wallet_dir + default_wallet_conf_file
+    wallet_conf_file = destination["wallet_directory"] + default_wallet_conf_file
 
-        if not utils.is_directory_exists(source_connection, wallet_dir):
-            polis.create_wallet_dir(wallet_dir,
-                                    utils.get_ip_from_connection_string(conf["connection_string"]),
-                                    conf["private_key"])
+    # Transfer File to remote directory
+    if vps.is_polis_installed(polis_destination, destination["destination_folder"]):
+        polis_destination.transfer_new_version(config["SourceFolder"], config["VersionToUpload"])
 
-        # Clean up old wallet dir
-        polis.clean_up_wallet_dir(wallet_dir)
+    if not utils.is_directory_exists(destination_connection, destination["wallet_directory"]):
+        polis_destination.create_wallet_dir(source["wallet_directory"],
+                                utils.get_ip_from_connection_string(destination["connection_string"]),
+                                destination["private_key"])
 
-        # Clean up the config file
-        if args.cleanConfig:
-            polis.clean_up_config(wallet_conf_file, "clear addnode")
+    # Clean up old wallet dir
+    polis_destination.clean_up_wallet_dir(destination["wallet_directory"])
 
-        # Add addnode in the config file
-        if args.addNodes:
-            polis.add_addnode(wallet_conf_file)
 
-        if args.installBootstrap:
-            polis.install_boostrap(conf)
-        else:
-            # Start the new daemon
-            polis.start_daemon(wallet_dir, use_wallet_dir)
+    # Add addnode in the config file
+    if args.addNodes:
+       polis_destination.add_addnode(wallet_conf_file)
 
-        # install sentinel
-        if not sentinel.is_sentinel_installed(connection):
-            sentinel.install_sentinel(connection, wallet_dir)
+    if args.installBootstrap:
+        polis_destination.install_boostrap(destination)
+    else:
+        # Start the new daemon
+        polis_destination.start_daemon(destination["wallet_directory"])
 
-    polis_destination.create_wallet_dir(wallet_dir,
-                                        utils.get_ip_from_connection_string(conf["connection_string"]),
-                                        destination["private_key"], True)
+    # install sentinel
+    if not sentinel.is_sentinel_installed(destination_connection):
+        sentinel.install_sentinel(destination_connection, destination["wallet_directory"])
+
+    # Restart the daemon watcher
+    utils.control_cron_service(source_connection, True)
+    utils.control_cron_service(destination_connection, True)
 
 
 '''
-
+init
 '''
 def init(args):
     # create logger
@@ -147,8 +151,9 @@ def init(args):
     logger.addHandler(fh)
     logger.addHandler(ch)
 
-'''
 
+'''
+main
 '''
 def main():
     global default_wallet_dir
@@ -190,11 +195,15 @@ def main():
     masternode_index = -1
 
     if args.masternodeMove:
-        move_masternode(args.masternodeMove, config["masternodes"])
-        logging.info('{} Has been successfully moved to {}'.format(args.masternodeMove[0], args.masternodeMove[1]))
-        utils.backup_configuration_file(args.config)
-        json.dump(config, file)
-    #
+        try :
+            move_masternode(args, config)
+            logging.info('{} Has been successfully moved to {}'.format(args.masternodeMove[0], args.masternodeMove[1]))
+            utils.backup_configuration_file(args.config)
+            json.dump(config, file)
+        except Exception as e:
+            logging.error('Could not move {} to {} ({})'.format(args.masternodeMove[0], args.masternodeMove[1], e), exc_info=e)
+        return
+
     for conf in config["masternodes"]:
         masternode_index += 1
         # noinspection PyBroadException
