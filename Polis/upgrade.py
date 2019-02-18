@@ -102,7 +102,7 @@ def move_masternode(args, config):
     wallet_conf_file = destination["wallet_directory"] + default_wallet_conf_file
 
     # Transfer File to remote directory
-    if vps.is_polis_installed(polis_destination, destination["destination_folder"]):
+    if vps.is_polis_installed(destination_connection, destination["destination_folder"]):
         polis_destination.transfer_new_version(config["SourceFolder"], config["VersionToUpload"])
 
     if not utils.is_directory_exists(destination_connection, destination["wallet_directory"]):
@@ -122,7 +122,7 @@ def move_masternode(args, config):
         polis_destination.install_boostrap(destination)
     else:
         # Start the new daemon
-        polis_destination.start_daemon(destination["wallet_directory"])
+        polis_destination.start_daemon(destination["destination_folder"])
 
     # install sentinel
     if not sentinel.is_sentinel_installed(destination_connection):
@@ -161,7 +161,7 @@ def main():
 
     # CLI arguments
     parser = argparse.ArgumentParser(description='Masternodes upgrade script')
-    parser.add_argument('--config', nargs='?', default="config.json", help='config file in Json format')
+    parser.add_argument('-c', '--config', nargs='?', default="config.json", help='config file in Json format')
     parser.add_argument('-deploy', action='store_true', help='deploy a new version')
     parser.add_argument('-cleanConfig', action='store_true', help='clean up to config files')
     parser.add_argument('-addNodes', action='store_true', help='edit the config file to add addnode entries')
@@ -183,6 +183,7 @@ def main():
     # Load configuration file
     file = open(args.config)
     config = json.load(file)
+    file.close()
 
     # Global settings
     default_wallet_dir = config["Polis"]["default_wallet_dir"]
@@ -199,7 +200,9 @@ def main():
             move_masternode(args, config)
             logging.info('{} Has been successfully moved to {}'.format(args.masternodeMove[0], args.masternodeMove[1]))
             utils.backup_configuration_file(args.config)
+            file = open(args.config, "w")
             json.dump(config, file)
+            file.close()
         except Exception as e:
             logging.error('Could not move {} to {} ({})'.format(args.masternodeMove[0], args.masternodeMove[1], e), exc_info=e)
         return
@@ -231,8 +234,8 @@ def main():
                                                   info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
 
 
-            if args.masternodeConf and "private_key" in conf :
-                masternode_output += "{0:>15} {}:24126 {1} {2}\n".format(conf["connection_string"],
+            if args.masternodeConf and "private_key" in conf and conf["private_key"] != "":
+                masternode_output += "{0:>15} {1}:24126 {2} {3}\n".format(conf["connection_string"],
                                                           utils.get_ip_from_connection_string(conf["connection_string"]),
                                                           conf["private_key"],
                                                           conf["outputs"])
