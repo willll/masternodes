@@ -90,12 +90,14 @@ class Polis:
         exists = utils.is_directory_exists(self.connection, wallet_dir)
         if not exists:
             utils.execute_command(self.connection, 'mkdir -p {}'.format(wallet_dir))
+        polis_conf = wallet_dir + 'polis.conf'
+        exists = utils.is_file_exists(self.connection, polis_conf)
+        if not exists:
             # Transfer the inflated to file to the target
             dir_path = os.path.dirname(os.path.realpath(__file__))
             polis_conf_tpl = dir_path + '/polis.conf'
             utils.send_file(self.connection, polis_conf_tpl, wallet_dir)
             # Setup the config file
-            polis_conf = wallet_dir + 'polis.conf'
             rpcuser = ''.join(
                 secrets.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for _ in range(50))
             utils.execute_command(self.connection, 'sed -i \'s/<RPCUSER>/{}/g\' {}'.format(rpcuser, polis_conf))

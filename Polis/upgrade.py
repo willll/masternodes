@@ -102,13 +102,12 @@ def move_masternode(args, config):
     wallet_conf_file = destination["wallet_directory"] + default_wallet_conf_file
 
     # Transfer File to remote directory
-    if vps.is_polis_installed(destination_connection, destination["destination_folder"]):
+    if not vps.is_polis_installed(destination_connection, destination["destination_folder"]):
         polis_destination.transfer_new_version(config["SourceFolder"], config["VersionToUpload"])
 
-    if not utils.is_directory_exists(destination_connection, destination["wallet_directory"]):
-        polis_destination.create_wallet_dir(source["wallet_directory"],
+    polis_destination.create_wallet_dir(source["wallet_directory"],
                                 utils.get_ip_from_connection_string(destination["connection_string"]),
-                                destination["private_key"])
+                                destination["private_key"], True)
 
     # Clean up old wallet dir
     polis_destination.clean_up_wallet_dir(destination["wallet_directory"])
