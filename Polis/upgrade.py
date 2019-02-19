@@ -25,6 +25,8 @@ default_wallet_conf_file = ""
 '''
 get_wallet_dir
 '''
+
+
 def get_wallet_dir(cnx):
     wallet_dirs = []
     use_wallet_dir = False
@@ -35,13 +37,15 @@ def get_wallet_dir(cnx):
     elif "wallet_directory" in cnx:
         wallet_dirs = [cnx["wallet_directory"]]
     else:
-        wallet_dirs = [ default_wallet_dir ]
-    return (wallet_dirs, use_wallet_dir)
+        wallet_dirs = [default_wallet_dir]
+    return wallet_dirs, use_wallet_dir
 
 
 '''
 Create a Polis connection
 '''
+
+
 def create_polis_connection(conf):
     kwargs = {}
     if "connection_certificate" in conf:
@@ -64,6 +68,8 @@ def create_polis_connection(conf):
 '''
 Moves a masternode to another VPS
 '''
+
+
 def move_masternode(args, config):
 
     cpt = 0
@@ -71,19 +77,20 @@ def move_masternode(args, config):
     destination = 0
     for tmp in config["masternodes"]:
         if cpt == args.masternodeMove[0]:
-           source = tmp
+            source = tmp
         if cpt == args.masternodeMove[1]:
-           destination = tmp
-        cpt+=1
+            destination = tmp
+        cpt += 1
 
-    if source == 0 or destination == 0 :
+    if source == 0 or destination == 0:
         Exception('Bad move arguments')
 
     # Create source connection
     polis_source, source_wallet_dirs, source_use_wallet_dir, source_connection = create_polis_connection(source)
 
     # Create destination connection
-    polis_destination, destination_wallet_dirs, destination_source_use_wallet_dir, destination_connection = create_polis_connection(destination)
+    polis_destination, destination_wallet_dirs, destination_source_use_wallet_dir, destination_connection \
+        = create_polis_connection(destination)
 
     # Stop the daemon watcher
     utils.control_cron_service(source_connection, False)
@@ -105,17 +112,16 @@ def move_masternode(args, config):
     if not vps.is_polis_installed(destination_connection, destination["destination_folder"]):
         polis_destination.transfer_new_version(config["SourceFolder"], config["VersionToUpload"])
 
-    polis_destination.create_wallet_dir(source["wallet_directory"],
+    polis_destination.create_wallet_dir(destination["wallet_directory"],
                                 utils.get_ip_from_connection_string(destination["connection_string"]),
                                 destination["private_key"], True)
 
     # Clean up old wallet dir
     polis_destination.clean_up_wallet_dir(destination["wallet_directory"])
 
-
     # Add addnode in the config file
     if args.addNodes:
-       polis_destination.add_addnode(wallet_conf_file)
+        polis_destination.add_addnode(wallet_conf_file)
 
     if args.installBootstrap:
         polis_destination.install_boostrap(destination)
@@ -135,11 +141,13 @@ def move_masternode(args, config):
 '''
 init
 '''
+
+
 def init(args):
     # create logger
     debug_level = logging.INFO
 
-    if args.masternodeStatus or args.masternodeConf or args.masternodeDiagnostic :
+    if args.masternodeStatus or args.masternodeConf or args.masternodeDiagnostic:
         debug_level = logging.ERROR
 
     logger = logging.getLogger('logger')
@@ -154,6 +162,8 @@ def init(args):
 '''
 main
 '''
+
+
 def main():
     global default_wallet_dir
     global default_wallet_conf_file
@@ -171,7 +181,7 @@ def main():
     parser.add_argument('-deployConfig', action='store_true', help='deploy polis.conf')
     parser.add_argument('-s', '--startDaemon', action='store_true', help='start the daemon')
     parser.add_argument('-masternodeConf', action='store_true', help='output the masternode.conf content')
-    parser.add_argument('-ls','--masternodeStatus', action='store_true', help='output the masternode status')
+    parser.add_argument('-ls', '--masternodeStatus', action='store_true', help='output the masternode status')
     parser.add_argument('-masternodeDiagnostic', action='store_true', help='output diagnostics')
     parser.add_argument('-grep', '--masternodeList', nargs='+', type=int, help='filter mastenodes by id')
     parser.add_argument('-mv', '--masternodeMove', nargs=2, type=int, help='move masternodes from one id to another')
@@ -195,7 +205,7 @@ def main():
     masternode_index = -1
 
     if args.masternodeMove:
-        try :
+        try:
             move_masternode(args, config)
             logging.info('{} Has been successfully moved to {}'.format(args.masternodeMove[0], args.masternodeMove[1]))
             utils.backup_configuration_file(args.config)
@@ -226,10 +236,11 @@ def main():
                                                   info.get_masternode_diagnostic(connection, target_directory, wallet_dir, use_wallet_dir))
 
             if args.masternodeStatus:
-                f = "\r\n{0:<4}: {1:<%d}:\r\n{2}" % (connection_string_max_length + 1)
+                f = "\r\n{0:<4}: {1:<%d} ({2}):\r\n{3}\r\n" % (connection_string_max_length + 1)
                 for wallet_dir in wallet_dirs:
                     masternode_output += f.format(masternode_index,
                                                   conf["connection_string"],
+                                                  conf["comment"],
                                                   info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
 
 
@@ -327,7 +338,6 @@ def main():
         is_unique, duplicates = vps.is_genkey_unique(config)
         if not is_unique:
             masternode_output += "Found duplicate keys : {} and {}".format(duplicates[0], duplicates[1])
-
 
     if args.masternodeStatus or args.masternodeConf or args.masternodeDiagnostic:
         print(masternode_output)
