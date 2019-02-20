@@ -4,7 +4,8 @@ import datetime
 import logging
 import shutil
 from invoke.exceptions import UnexpectedExit
-
+# third party imports
+from patchwork.files import exists
 
 '''
 execute_command
@@ -38,7 +39,7 @@ is_directory_exists
 def is_directory_exists(connection, directory):
     is_exists = False
     try:
-        execute_command(connection, '[[ -d {} ]]'.format(directory))
+        execute_command(connection, '[[ -d {} ]]'.format(directory), False)
         is_exists = True
     except UnexpectedExit:
         logging.info('{} does not exist !'.format(directory))
@@ -51,13 +52,7 @@ is_file_exists
 
 
 def is_file_exists(connection, file):
-    is_exists = False
-    try:
-        execute_command(connection, '[[ -n {} ]]'.format(file))
-        is_exists = True
-    except UnexpectedExit as e:
-        logging.info('{} does not exist ! ({})'.format(file, e))
-    return is_exists
+    return exists(connection, file)
 
 
 '''

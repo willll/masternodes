@@ -42,7 +42,7 @@ def is_vps_installed(connection):
 is_polis_installed
 '''
 def is_polis_installed(connection, dir):
-    return is_file_exists(connection, "{}{}".format(dir, 'polisd'))
+    return is_file_exists(connection, "{}/{}".format(dir, 'polisd'))
 
 
 '''

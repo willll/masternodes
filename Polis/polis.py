@@ -117,9 +117,11 @@ class Polis:
 
     def transfer_new_version(self, source_folder, version_to_upload):
         try:
+            # Create source_folder directory
+            utils.execute_command(self.connection, 'mkdir -p {}'.format(self.target_directory))
             # Transfer the inflated to file to the target
             utils.send_file(self.connection, '{}{}'.format(source_folder, version_to_upload), self.target_directory)
-            # deflate the file
+            # Deflate the file
             utils.execute_command(self.connection, 'unzip -u -o {}/{} -d {}'.format(self.target_directory, version_to_upload, self.target_directory))
             # Delete the archive
             utils.execute_command(self.connection, 'rm {}/{}'.format(self.target_directory, version_to_upload))

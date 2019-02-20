@@ -108,6 +108,8 @@ def move_masternode(args, config):
 
     wallet_conf_file = destination["wallet_directory"] + default_wallet_conf_file
 
+    if not vps.is_vps_installed(connection):
+        vps.install_vps(connection)
     # Transfer File to remote directory
     if not vps.is_polis_installed(destination_connection, destination["destination_folder"]):
         polis_destination.transfer_new_version(config["SourceFolder"], config["VersionToUpload"])
