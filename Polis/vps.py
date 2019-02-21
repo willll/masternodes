@@ -42,8 +42,10 @@ def is_vps_installed(connection):
 is_polis_installed
 '''
 def is_polis_installed(connection, dir):
-    return is_file_exists(connection, "{}/{}".format(dir, 'polisd'))
-
+    if not dir.endswith('/'):
+        return is_file_exists(connection, "{}/{}".format(dir, 'polisd'))
+    else:
+        return is_file_exists(connection, "{}{}".format(dir, 'polisd'))
 
 '''
 is_monitoring_script_installed
