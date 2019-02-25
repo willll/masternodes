@@ -7,7 +7,9 @@ from coin import Coin,Polis
 from vps import VPS
 from config import config,logging
 
+from pymemcache.client import base
 
+client = base.Client(('localhost', 11211))
 
 app = Klein()
 '''
@@ -18,6 +20,13 @@ def hello_world(request):
     request.redirect(redirect)
     #return 'Hello, World! <a href="/mns/list">Masternodes</a>' \
     #       '<a href="/daemon/startpolis">Start Polis</a> <a href=''>Masternodes</a> '
+
+
+@app.route('/test')
+def test(request):
+    client.get('some_key')
+
+    return "Test"
 
 
 '''
