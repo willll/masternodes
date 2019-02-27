@@ -93,13 +93,16 @@ def move_masternode(args, config):
         = create_polis_connection(destination)
 
     # Stop the daemon watcher
-    utils.control_cron_service(source_connection, False)
-    utils.control_cron_service(destination_connection, False)
+    try:
+        utils.control_cron_service(source_connection, False)
+        polis_source.stop_daemon()
+    except Exception as e:
+        logging.error('Could not m=stoo source : {} ({})'.format(source, e),
+                     exc_info=e)
 
-    polis_source.stop_daemon()
+    utils.control_cron_service(destination_connection, False)
     polis_destination.stop_daemon()
 
-    destination["wallet_directory"] = source["wallet_directory"]
     destination["private_key"] = source["private_key"]
     destination["outputs"] = source["outputs"]
     source["wallet_directory"] = ""
@@ -108,8 +111,8 @@ def move_masternode(args, config):
 
     wallet_conf_file = destination["wallet_directory"] + default_wallet_conf_file
 
-    if not vps.is_vps_installed(connection):
-        vps.install_vps(connection)
+    if not vps.is_vps_installed(destination_connection):
+        vps.install_vps(destination_connection)
     # Transfer File to remote directory
     if not vps.is_polis_installed(destination_connection, destination["destination_folder"]):
         polis_destination.transfer_new_version(config["SourceFolder"], config["VersionToUpload"])
@@ -136,7 +139,6 @@ def move_masternode(args, config):
         sentinel.install_sentinel(destination_connection, destination["wallet_directory"])
 
     # Restart the daemon watcher
-    utils.control_cron_service(source_connection, True)
     utils.control_cron_service(destination_connection, True)
 
 
