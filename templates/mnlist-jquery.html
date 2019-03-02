@@ -332,12 +332,14 @@ var BLOCKHEIGHT = 0
             console.log("Filling up masternodes table"+ mn_status.attr("id"));
             updateStatus(mn_status.attr("id"))
         });
+        setTimeout(updateAll, 30000);
     }
     function getinfoAll()
     {
         $(".display_getinfo").each(function(){
             getinfo($(this).attr("id").split("_").pop())
         });
+        setTimeout(getinfoAll, 30000);
     }
     $('.update').bind('click', function() {
         var id = '#status_'+$(this).attr('id') 
