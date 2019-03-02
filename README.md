@@ -15,6 +15,6 @@ source bin/activate
 
 sudo pip3 install -r requirements.txt
 
+# How to dump memcache keys :
 
-
-
+memcdump --servers=localhost

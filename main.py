@@ -21,19 +21,12 @@ DONE:
 
 from rest import app
 from config import config
-import psutil
-import subprocess
+from tasks import configure_reactor
 
 
 if __name__ == '__main__':
-    # start memcached
-    if not "memcached" in (p.name() for p in psutil.process_iter()):
-        subprocess.Popen(["memcached"])
+    configure_reactor()
 
-    # start celery
-    #if not "celery" in (p.name() for p in psutil.process_iter()):
-    #    subprocess.Popen(['celery -A bkgTasks.main worker --loglevel=debug'],shell=True)
-    # start klein webapp
     app.run(host=config["Listen"]["host"], port=config["Listen"]["port"])
 
 

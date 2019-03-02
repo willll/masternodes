@@ -22,11 +22,10 @@ def hello_world(request):
     #       '<a href="/daemon/startpolis">Start Polis</a> <a href=''>Masternodes</a> '
 
 
-@app.route('/test')
-def test(request):
-    client.get('some_key')
+@app.route('/test/<int:mnidx>')
+def test(request, mnidx):
 
-    return "Test"
+    return client.get('mnstat{}'.format(mnidx))
 
 
 '''
@@ -367,9 +366,10 @@ with app.subroute("/mns") as mns:
                    'mnss': 'mnsync status',
                    'mnsr': 'mnsync reset'}
 
-        coin = Polis(config["Polis"])
+        '''coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
 
         result = vps.async_cli(actions[actidx], coin)
         return result
-
+        '''
+        result = client.get('{}{}'.format(actidx, mnidx))

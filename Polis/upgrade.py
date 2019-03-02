@@ -233,10 +233,11 @@ def main():
             polis, wallet_dirs, use_wallet_dir, connection = create_polis_connection(conf)
 
             if args.masternodeDiagnostic:
-                f = "{0:<4}: {1:<%d}: {2}\n" % (connection_string_max_length + 1)
+                f = "{0:<4}: {1:<%d}: {2} {3}\r\n" % (connection_string_max_length + 1)
                 for wallet_dir in wallet_dirs:
                     masternode_output += f.format(masternode_index,
                                                   conf["connection_string"],
+                                                  conf["comment"],
                                                   info.get_masternode_diagnostic(connection, target_directory, wallet_dir, use_wallet_dir))
 
             if args.masternodeStatus:
