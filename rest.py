@@ -373,3 +373,4 @@ with app.subroute("/mns") as mns:
         return result
         '''
         result = client.get('{}{}'.format(actidx, mnidx))
+        return result
