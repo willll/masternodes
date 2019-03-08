@@ -366,11 +366,9 @@ with app.subroute("/mns") as mns:
                    'mnss': 'mnsync status',
                    'mnsr': 'mnsync reset'}
 
-        '''coin = Polis(config["Polis"])
+        coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
 
         result = vps.async_cli(actions[actidx], coin)
         return result
-        '''
-        result = client.get('{}{}'.format(actidx, mnidx))
-        return result
+

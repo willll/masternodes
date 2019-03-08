@@ -13,4 +13,3 @@ logging.basicConfig(
     filemode="w",
     level=logging.INFO)
 
-memcached = memcached_config.Memcached_config()

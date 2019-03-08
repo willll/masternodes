@@ -21,11 +21,9 @@ DONE:
 
 from rest import app
 from config import config
-from tasks import configure_reactor
 
 
 if __name__ == '__main__':
-    configure_reactor()
 
     app.run(host=config["Listen"]["host"], port=config["Listen"]["port"])
 
