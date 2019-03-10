@@ -24,4 +24,5 @@ Werkzeug==0.14.1
 zope.interface==4.6.0
 slick-bitcoinrpc==0.1.4
 patchwork==1.0.1
+pyzmq
 psutil

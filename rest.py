@@ -9,6 +9,9 @@ from config import config,logging
 
 from pymemcache.client import base
 
+import  zmq
+import random
+
 client = base.Client(('localhost', 11211))
 
 app = Klein()
@@ -366,9 +369,23 @@ with app.subroute("/mns") as mns:
                    'mnss': 'mnsync status',
                    'mnsr': 'mnsync reset'}
 
+        port = "5559"
+        context = zmq.Context()
+        socket = context.socket(zmq.REQ)
+        socket.connect(f"tcp://localhost:{port}")
+        client_id = random.randrange(1, 10005)
+        msg = {'id':client_id, 'mnidx':mnidx, 'actidx':actidx}
+        socket.send_json(json.dumps(msg))
+        r = socket.recv_json()
+        print(f"Received from port {r}")
+
+        '''
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
 
         result = vps.async_cli(actions[actidx], coin)
         return result
+        '''
+
+        return f"{{'status':'restart', 'client_id':'{client_id}'}}"
 
