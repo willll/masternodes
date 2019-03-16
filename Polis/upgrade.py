@@ -1,9 +1,6 @@
 # system imports
 import logging
 import sys
-import json
-import os
-import argparse
 
 # third party imports
 from fabric import Connection
@@ -13,6 +10,7 @@ import utils
 import info
 import sentinel
 import vps
+import json
 from polis import Polis
 
 '''
@@ -164,33 +162,11 @@ def init(args):
 
 
 '''
-main
+masternode
 '''
 
 
-def main():
-    global default_wallet_dir
-    global default_wallet_conf_file
-
-    # CLI arguments
-    parser = argparse.ArgumentParser(description='Masternodes upgrade script')
-    parser.add_argument('-c', '--config', nargs='?', default="config.json", help='config file in Json format')
-    parser.add_argument('-deploy', action='store_true', help='deploy a new version')
-    parser.add_argument('-cleanConfig', action='store_true', help='clean up to config files')
-    parser.add_argument('-addNodes', action='store_true', help='edit the config file to add addnode entries')
-    parser.add_argument('-r', '--reindex', action='store_true', help='reindex the masternodes')
-    parser.add_argument('-installVPS', action='store_true', help='install the VPSs')
-    parser.add_argument('-installBootstrap', action='store_true', help='install the bootstrap')
-    parser.add_argument('-installSentinel', action='store_true', help='install sentinel')
-    parser.add_argument('-deployConfig', action='store_true', help='deploy polis.conf')
-    parser.add_argument('-s', '--startDaemon', action='store_true', help='start the daemon')
-    parser.add_argument('-masternodeConf', action='store_true', help='output the masternode.conf content')
-    parser.add_argument('-ls', '--masternodeStatus', action='store_true', help='output the masternode status')
-    parser.add_argument('-masternodeDiagnostic', action='store_true', help='output diagnostics')
-    parser.add_argument('-grep', '--masternodeList', nargs='+', type=int, help='filter mastenodes by id')
-    parser.add_argument('-mv', '--masternodeMove', nargs=2, type=int, help='move masternodes from one id to another')
-    args = parser.parse_args()
-
+def masternode(args):
     init(args)
 
     # Load configuration file
@@ -217,7 +193,8 @@ def main():
             json.dump(config, file)
             file.close()
         except Exception as e:
-            logging.error('Could not move {} to {} ({})'.format(args.masternodeMove[0], args.masternodeMove[1], e), exc_info=e)
+            logging.error('Could not move {} to {} ({})'.format(args.masternodeMove[0], args.masternodeMove[1], e),
+                          exc_info=e)
         return
 
     for conf in config["masternodes"]:
@@ -238,7 +215,8 @@ def main():
                     masternode_output += f.format(masternode_index,
                                                   conf["connection_string"],
                                                   conf["comment"],
-                                                  info.get_masternode_diagnostic(connection, target_directory, wallet_dir, use_wallet_dir))
+                                                  info.get_masternode_diagnostic(connection, target_directory,
+                                                                                 wallet_dir, use_wallet_dir))
 
             if args.masternodeStatus:
                 f = "\r\n{0:<4}: {1:<%d} ({2}):\r\n{3}\r\n" % (connection_string_max_length + 1)
@@ -246,14 +224,15 @@ def main():
                     masternode_output += f.format(masternode_index,
                                                   conf["connection_string"],
                                                   conf["comment"],
-                                                  info.get_masternode_status(connection, target_directory, wallet_dir, use_wallet_dir))
-
+                                                  info.get_masternode_status(connection, target_directory, wallet_dir,
+                                                                             use_wallet_dir))
 
             if args.masternodeConf and "private_key" in conf and conf["private_key"] != "":
                 masternode_output += "{0:>15} {1}:24126 {2} {3}\n".format(conf["connection_string"],
-                                                          utils.get_ip_from_connection_string(conf["connection_string"]),
-                                                          conf["private_key"],
-                                                          conf["outputs"])
+                                                                          utils.get_ip_from_connection_string(
+                                                                              conf["connection_string"]),
+                                                                          conf["private_key"],
+                                                                          conf["outputs"])
 
             if args.startDaemon:
                 for wallet_dir in wallet_dirs:
@@ -285,8 +264,8 @@ def main():
                 for wallet_dir in wallet_dirs:
                     wallet_conf_file = wallet_dir + default_wallet_conf_file
                     polis.create_wallet_dir(wallet_dir,
-                                      utils.get_ip_from_connection_string(conf["connection_string"]),
-                                      conf["private_key"], True)
+                                            utils.get_ip_from_connection_string(conf["connection_string"]),
+                                            conf["private_key"], True)
                     if args.addNodes:
                         polis.add_addnode(wallet_conf_file)
                 logging.info('{} Has been successfully configured'.format(conf["connection_string"]))
@@ -306,12 +285,12 @@ def main():
                 polis.transfer_new_version(config["SourceFolder"], config["VersionToUpload"])
 
                 for wallet_dir in wallet_dirs:
-                    wallet_conf_file = wallet_dir+default_wallet_conf_file
+                    wallet_conf_file = wallet_dir + default_wallet_conf_file
 
                     if not utils.is_directory_exists(connection, wallet_dir):
                         polis.create_wallet_dir(wallet_dir,
-                                          utils.get_ip_from_connection_string(conf["connection_string"]),
-                                          conf["private_key"])
+                                                utils.get_ip_from_connection_string(conf["connection_string"]),
+                                                conf["private_key"])
 
                     # Clean up old wallet dir
                     polis.clean_up_wallet_dir(wallet_dir)
@@ -347,6 +326,3 @@ def main():
     if args.masternodeStatus or args.masternodeConf or args.masternodeDiagnostic:
         print(masternode_output)
 
-
-if __name__ == '__main__':
-    main()

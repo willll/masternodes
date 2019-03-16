@@ -15,7 +15,7 @@ actions = {'mnstat': 'masternode status',
 
 def configure_reactor():
     for command in actions :
-        for i in range(1, len(config["masternodes"])):
+        for i in range(0, len(config["masternodes"])):
             l = task.LoopingCall(action, i, command)
             l.start(60.0, False)  # call every 30 seconds
             tasks.append(l)
