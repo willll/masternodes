@@ -46,5 +46,9 @@ def rpc_control(args):
         rpc_output += str(rpc.listunspent())
         rpc_output += "\r\n"
 
+    if args.getbalance:
+        rpc_output += str(rpc.getbalance())
+        rpc_output += "\r\n"
+
     print(rpc_output)
 

@@ -17,6 +17,9 @@ class RPC:
     def getstakingstatus(self):
         return self.proxy.getstakingstatus()
 
+    def getbalance(self):
+        return self.proxy.getbalance()
+
 
     def getnewaddress(self):
         return self.proxy.getnewaddress()

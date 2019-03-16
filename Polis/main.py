@@ -40,6 +40,8 @@ def main():
                                    help='config file in Json format')
     parser_rpc.add_argument('-listunspent', action='store_true',
                                    help='list unspent')
+    parser_rpc.add_argument('-getbalance', action='store_true',
+                            help='returns the server\'s total available balance.')
 
     args = parser.parse_args()
 
