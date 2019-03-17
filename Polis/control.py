@@ -40,7 +40,10 @@ def rpc_control(args):
 
     rpc_output = ""
 
-    rpc = RPC(config["Polis"]["wallet"]["username"],config["Polis"]["wallet"]["password"],config["Polis"]["wallet"]["ip"],config["Polis"]["wallet"]["port"])
+    rpc = RPC(config["Polis"]["wallet"]["username"],
+              config["Polis"]["wallet"]["password"],
+              config["Polis"]["wallet"]["ip"],
+              config["Polis"]["wallet"]["port"])
 
     if args.lstx:
         args.listunspent = True
