@@ -1,7 +1,7 @@
 from slickrpc import Proxy
 
-
 # https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list
+
 
 class RPC:
     def __init__(self, username, password, ip, port=24127):
@@ -15,6 +15,7 @@ class RPC:
         return self.proxy.listlockunspent()
 
     def listaccounts(self):
+        return self.proxy.listaccounts()
 
     def listtransactions(self):
         return self.proxy.listtransactions()
