@@ -9,6 +9,11 @@ class RPC:
     def listunspent(self):
         return self.proxy.listunspent()
 
+    def listlockunspent(self):
+        return self.proxy.listlockunspent()
+
+    def listaccounts(self):
+        return self.proxy.listaccounts()
 
     def listtransactions(self):
         return self.proxy.listtransactions()

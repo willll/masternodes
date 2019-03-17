@@ -38,10 +38,17 @@ def main():
     parser_rpc = subparsers.add_parser('rpc')
     parser_rpc.add_argument('-c', '--config', nargs='?', default="config.json",
                                    help='config file in Json format')
+    parser_rpc.add_argument('-lstx', action='store_true',
+                            help='list inputs')
     parser_rpc.add_argument('-listunspent', action='store_true',
                                    help='list unspent')
+    parser_rpc.add_argument('-listlockunspent', action='store_true',
+                            help='list of temporarily unspendable outputs')
+    parser_rpc.add_argument('-listaccounts', action='store_true',
+                            help='Returns Object that has account names as keys, account balances as values.')
     parser_rpc.add_argument('-getbalance', action='store_true',
                             help='returns the server\'s total available balance.')
+
 
     args = parser.parse_args()
 

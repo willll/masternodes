@@ -42,12 +42,24 @@ def rpc_control(args):
 
     rpc = RPC(config["Polis"]["wallet"]["username"],config["Polis"]["wallet"]["password"],config["Polis"]["wallet"]["ip"],config["Polis"]["wallet"]["port"])
 
+    if args.lstx:
+        args.listunspent = True
+        args.listlockunspent = True
+
     if args.listunspent:
-        rpc_output += str(rpc.listunspent())
+        rpc_output += "\"listunspent:\" " + json.dumps(rpc.listunspent(), indent=2)
+        rpc_output += "\r\n"
+
+    if args.listlockunspent:
+        rpc_output += "\"listlockunspent:\" " + json.dumps(rpc.listlockunspent(), indent=2)
+        rpc_output += "\r\n"
+
+    if args.listaccounts:
+        rpc_output += "\"listaccounts:\" " + json.dumps(rpc.listaccounts(), indent=2)
         rpc_output += "\r\n"
 
     if args.getbalance:
-        rpc_output += str(rpc.getbalance())
+        rpc_output += "\"getbalance:\" " + json.dumps(rpc.getbalance(), indent=2)
         rpc_output += "\r\n"
 
     print(rpc_output)
