@@ -100,9 +100,11 @@ def cli_action(mnidx, actidx, reqid):
     port = "5570"
     context = zmq.Context()
     socket = context.socket(zmq.PUSH)
-    socket.connect(f"tcp://localhost:{port}")
+    socket.connect(f"tcp://127.0.0.1:{port}")
+
     msg = {'id': reqid, 'mnidx': mnidx, 'actidx': actidx, 'result': result}
     socket.send_json(json.dumps(msg))
+
 
     print(f"Sent result to websocket:\n\t{result}\n")
 
@@ -121,6 +123,9 @@ def server():
     socket = context.socket(zmq.REP)
     socket.connect("tcp://localhost:%s" % port)
     procs = {}
+
+
+
     while True:
         #  Wait for next request from client
         message = socket.recv_json()
@@ -130,7 +135,7 @@ def server():
 
         socket.send_json("{'result':'success'}")
 
-        Process(target=cli_action, args=(params['mnidx'], params['actidx'], params['id'])).start()
+        Process(target=cli_action, args=(params['mnidx'], params['actidx'], params['id'], )).start()
         #need to join somewhere here
 
 

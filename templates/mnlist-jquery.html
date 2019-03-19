@@ -139,6 +139,10 @@
 </div>
 
 <script type=text/javascript>
+/* global */
+var ws_port = 9001
+
+
 var BLOCKHEIGHT = 0
     /*
         Filtering select code:
@@ -177,7 +181,7 @@ var BLOCKHEIGHT = 0
      var socket = null;
      var isopen = false;
      window.onload = function() {
-        socket = new WebSocket("ws://127.0.0.1:9000");
+        socket = new WebSocket("ws://127.0.0.1:"+ws_port);
         socket.binaryType = "arraybuffer";
         socket.onopen = function() {
            console.log("Connected!");

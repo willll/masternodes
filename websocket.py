@@ -23,15 +23,19 @@ class MyServerProtocol(WebSocketServerProtocol):
             port = "5570"
             context = zmq.Context()
             socket = context.socket(zmq.PULL)
-            socket.connect("tcp://localhost:%s" % port)
+            socket.bind(f"tcp://127.0.0.1:{port}")
             while True:
                 #  Wait for next request from client
                 message = socket.recv_json()
 
                 params = json.loads(message)
 
-                self.sendMessage(params)
+                print(f"Websocket SENDING!! {params.encode('utf8')}\n !!!!!!!!!!!!!!!")
 
+                self.sendMessage(params.encode('utf8'))
+                context.
+
+        handeZMQ()
 
 
     def onMessage(self, payload, isBinary):
