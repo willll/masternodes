@@ -52,6 +52,15 @@ def setup_zmq():
 from coin import Polis
 from vps import VPS
 
+
+def websocket_sender():
+    '''
+    should send result to front end
+
+    :return:
+    '''
+
+
 def cli_action(mnidx, actidx):
     '''
     This should not be here,
@@ -73,14 +82,6 @@ def cli_action(mnidx, actidx):
 
     return result
 
-def websocket_sender():
-    '''
-    should send result to front end
-
-    :return:
-    '''
-
-
 def server():
     port = "5560"
     context = zmq.Context()
@@ -96,8 +97,11 @@ def server():
 
         socket.send_json("{'result':'success'}")
 
-        proc = Process(target=cli_action, args=(params['mnidx'], params['actidx'],))
+        proc = Process(target=cli_action, args=(params['mnidx'], params['actidx'],)).start()
         procs[params['id']] = proc
+        if proc != None:
+            proc.join()
+            print("Completed process")
         #need to join somewhere here
 
         #instantiate thread here to handle work
