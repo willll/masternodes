@@ -1,74 +1,52 @@
-from autobahn.twisted.websocket import WebSocketServerProtocol
+#  https://github.com/crossbario/autobahn-python/blob/master/examples/twisted/websocket/echo/server.py
+
+from autobahn.twisted.websocket import WebSocketServerProtocol, \
+    WebSocketServerFactory
+import json
+import zmq
+
 
 class MyServerProtocol(WebSocketServerProtocol):
 
-    def onMes
-
     def onConnect(self, request):
-        '''
-        In this callback you can do things like
-
-        csage(self, payload, isBinary):
-        ## echo back message verbatim
-        self.sendMessage(payload, isBinary)
-hecking or setting cookies or other HTTP headers
-        verifying the client IP address
-        checking the origin of the WebSocket request
-        negotiate WebSocket subprotocols
-        :param request:
-        :return:
-        '''
-        print(f"Client connecting: {request.peer}")
+        print("Client connecting: {0}".format(request.peer))
 
     def onOpen(self):
         print("WebSocket connection open.")
 
+        def handeZMQ():
+            '''
+            Read ZMQ push/pull for  messages and send
+            to frontend
+            :return:
+            '''
+            port = "5570"
+            context = zmq.Context()
+            socket = context.socket(zmq.PULL)
+            socket.connect("tcp://localhost:%s" % port)
+            while True:
+                #  Wait for next request from client
+                message = socket.recv_json()
+
+                params = json.loads(message)
+
+                self.sendMessage(params)
+
+
+
+    def onMessage(self, payload, isBinary):
+        if isBinary:
+            print("Binary message received: {0} bytes".format(len(payload)))
+        else:
+            print("Text message received: {0}".format(payload.decode('utf8')))
+
+        # echo back message verbatim
+        self.sendMessage(payload, isBinary)
+
     def onClose(self, wasClean, code, reason):
-        '''
-
-        :param wasClean:
-        :param code:
-        :param reason:
-        :return:
-        '''
-        print(f"WebSocket connection closed: {format(reason)}")
-
-'''
-async def consumer(message):
-    print("consumer: ", message)
+        print("WebSocket connection closed: {0}".format(reason))
 
 
-async def producer():
-    now = datetime.datetime.utcnow().isoformat() + 'Z'
-    return (now)
 
 
-async def consumer_handler(websocket):
-    while True:
-        async for message in websocket:
-            print(f"this went in glob_message: {message}")
-            await consumer(message)    #global glob_message
-
-
-async def producer_handler(websocket):
-    #global glob_message
-    while True:
-        message = await producer()
-        print("producer: ", message)
-        await websocket.send(message)
-        await asyncio.sleep(5.0)
-
-
-async def handler(websocket, path):
-    producer_task = asyncio.ensure_future(producer_handler(websocket))
-    consumer_task = asyncio.ensure_future(consumer_handler(websocket))
-    done, pending = await asyncio.wait(
-        [consumer_task, producer_task],
-        return_when=asyncio.ALL_COMPLETED,
-    )
-
-    for task in pending:
-        task.cancel()
-
-'''
 

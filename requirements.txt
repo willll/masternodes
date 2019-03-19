@@ -26,3 +26,5 @@ slick-bitcoinrpc==0.1.4
 patchwork==1.0.1
 pyzmq
 psutil
+pymemcache
+autobahn

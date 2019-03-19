@@ -24,10 +24,13 @@ from config import config
 import zmq
 from multiprocessing import Process,Queue
 import json
-import time
-import random
 
 def setup_zmq():
+    '''
+    This process is the ZMQ REQ/REP broker
+
+    :return:
+    '''
     #create a queue to use by workers, which is fed by REST
     try:
         context = zmq.Context(1)
@@ -52,19 +55,34 @@ def setup_zmq():
 from coin import Polis
 from vps import VPS
 
+from websocket import WebSocketServerFactory, MyServerProtocol
 
-def websocket_sender():
+
+def ws_handler():
     '''
-    should send result to front end
+    This process should get message from zmq and send it to front end via ws
 
     :return:
     '''
+    from twisted.internet import reactor
+    websocket_port = 9001
+
+    factory = WebSocketServerFactory(f"ws://127.0.0.1:{websocket_port}")
+    factory.protocol = MyServerProtocol
+    # factory.setProtocolOptions(maxConnections=2)
+
+    # note to self: if using putChild, the child must be bytes...
+
+    reactor.listenTCP(websocket_port, factory)
+    reactor.run()
 
 
-def cli_action(mnidx, actidx):
+def cli_action(mnidx, actidx, reqid):
     '''
     This should not be here,
     but while i figure out structure it should work.
+
+    This process takes care of actions that will block because of SSH
 
     :return:
     '''
@@ -78,11 +96,26 @@ def cli_action(mnidx, actidx):
 
     result = vps.async_cli(actions[actidx], coin)
 
-    print(f"Sending result to websocket:\n\t{result}\n")
+    #use new push/pull queue for websocket results
+    port = "5570"
+    context = zmq.Context()
+    socket = context.socket(zmq.PUSH)
+    socket.connect(f"tcp://localhost:{port}")
+    msg = {'id': reqid, 'mnidx': mnidx, 'actidx': actidx, 'result': result}
+    socket.send_json(json.dumps(msg))
 
+    print(f"Sent result to websocket:\n\t{result}\n")
+
+    #should clean up by exiting process here?
     return result
 
 def server():
+    '''
+    This process should read the queue for blocking REST requests and start a
+    process to deal with it and send results to websocket handler
+
+    :return:
+    '''
     port = "5560"
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -97,23 +130,19 @@ def server():
 
         socket.send_json("{'result':'success'}")
 
-        proc = Process(target=cli_action, args=(params['mnidx'], params['actidx'],)).start()
-        procs[params['id']] = proc
-        if proc != None:
-            proc.join()
-            print("Completed process")
+        Process(target=cli_action, args=(params['mnidx'], params['actidx'], params['id'])).start()
         #need to join somewhere here
 
-        #instantiate thread here to handle work
-
-        #do websocket response.
 
 if __name__ == '__main__':
-    #start queue
+    #start queue broker
     Process(target=setup_zmq).start()
-    #start some workers:
+
+    #start some SSH REST request workers:
     Process(target=server).start()
 
+    #start websocket handler
+    Process(target=ws_handler).start()
 
     app.run(host=config["Listen"]["host"], port=config["Listen"]["port"])
 
