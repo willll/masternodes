@@ -164,8 +164,6 @@ var BLOCKHEIGHT = 0
 
     function getBlockHeight( print ){
         $.getJSON("https://insight.polispay.org/api/blocks",{limit:1},function(data){
-            console.log(JSON.stringify(data))
-            console.log(data.blocks[0].height)
             if(print)
             {
                 $("#bh").append(data.blocks[0].height)
@@ -180,7 +178,8 @@ var BLOCKHEIGHT = 0
 
      var socket = null;
      var isopen = false;
-     window.onload = function() {
+     function ws_setup() {
+        console.log("Connecting to websocket")
         socket = new WebSocket("ws://127.0.0.1:"+ws_port);
         socket.binaryType = "arraybuffer";
         socket.onopen = function() {
@@ -188,6 +187,7 @@ var BLOCKHEIGHT = 0
            isopen = true;
         }
         socket.onmessage = function(e) {
+            console.log("Got message on websocket")
            if (typeof e.data == "string") {
               console.log("Text message received: " + e.data);
               /*
@@ -231,6 +231,11 @@ var BLOCKHEIGHT = 0
            console.log("Connection not opened.")
         }
      };
+
+     function pingWs()
+     {
+        sendText()
+     }
 
 
 
@@ -412,7 +417,6 @@ var BLOCKHEIGHT = 0
     {
         $(".status").each(function(){
             var mn_status = $(this);
-            console.log("Filling up masternodes table"+ mn_status.attr("id"));
             updateStatus(mn_status.attr("id"))
         });
        // setTimeout(updateAll, 30000);
@@ -493,9 +497,12 @@ var BLOCKHEIGHT = 0
 
   $( document ).ready(function() {
       console.log("Document ready")
+      ws_setup();
       getBlockHeight(1);
       updateAll();
       getinfoAll();
+
+      pingWs();
 
     });
 

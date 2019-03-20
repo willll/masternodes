@@ -18,8 +18,6 @@ TODO: Enable multi threading or non blocking of requests/responses,
 DONE:
 '''
 
-
-from rest import app
 from config import config
 import zmq
 from multiprocessing import Process,Queue
@@ -51,29 +49,24 @@ def setup_zmq():
         backend.close()
         context.term()
 
-
-from coin import Polis
-from vps import VPS
-
-from websocket import WebSocketServerFactory, MyServerProtocol
-
-
 def ws_handler():
     '''
     This process should get message from zmq and send it to front end via ws
 
     :return:
     '''
-    from twisted.internet import reactor
-    websocket_port = 9001
 
-    factory = WebSocketServerFactory(f"ws://127.0.0.1:{websocket_port}")
+
+    from websocket import WebSocketServerFactory, MyServerProtocol
+    from twisted.internet import reactor
+
+    factory = WebSocketServerFactory(u"ws://127.0.0.1:9001")
     factory.protocol = MyServerProtocol
     # factory.setProtocolOptions(maxConnections=2)
 
     # note to self: if using putChild, the child must be bytes...
 
-    reactor.listenTCP(websocket_port, factory)
+    reactor.listenTCP(9001, factory)
     reactor.run()
 
 
@@ -86,6 +79,9 @@ def cli_action(mnidx, actidx, reqid):
 
     :return:
     '''
+
+    from coin import Polis
+    from vps import VPS
     actions = {'mnstat': 'masternode status',
                'gi': 'getinfo',
                'mnss': 'mnsync status',
@@ -99,17 +95,15 @@ def cli_action(mnidx, actidx, reqid):
     #use new push/pull queue for websocket results
     port = "5570"
     context = zmq.Context()
-    socket = context.socket(zmq.PUSH)
-    socket.connect(f"tcp://127.0.0.1:{port}")
+    socket = context.socket(zmq.PUB)
+    socket.bind(f"tcp://127.0.0.1:{port}")
 
     msg = {'id': reqid, 'mnidx': mnidx, 'actidx': actidx, 'result': result}
-    socket.send_json(json.dumps(msg))
-
-
-    print(f"Sent result to websocket:\n\t{result}\n")
+    socket.send_string(json.dumps(msg))
 
     #should clean up by exiting process here?
     return result
+
 
 def server():
     '''
@@ -149,6 +143,7 @@ if __name__ == '__main__':
     #start websocket handler
     Process(target=ws_handler).start()
 
+    from rest import app
     app.run(host=config["Listen"]["host"], port=config["Listen"]["port"])
 
 
