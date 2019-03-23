@@ -13,6 +13,9 @@ class MasernodeCmd(Enum):
     current = 'current'
     genkey = 'genkey'
     status = 'status'
+    outputs = 'outputs'
+    winner = 'winner'
+    winners = 'winners'
     list = 'list'
 
     def __str__(self):
@@ -60,24 +63,10 @@ def main():
     parser_rpc.add_argument('-getbalance', action='store_true',
                             help='returns the server\'s total available balance.')
     #== Polis ==
-    parser_rpc.add_argument('-get-masternode-current', action='store_true',
-                            help='Print info on current masternode winner to be paid the next block (calculated locally)')
-    parser_rpc.add_argument('-get-masternode-genkey', action='store_true',
-                            help='Generate new masternodeprivkey')
-    parser_rpc.add_argument('-get-masternode-outputs', action='store_true',
-                            help='Print masternode compatible outputs')
     parser_rpc.add_argument('-masternode-start-alias', action='store_true',
                             help='Start single remote masternode by assigned alias configured in masternode.conf')
     #parser_rpc.add_argument('-masternode-start-<mode> ', action='store_true',
     #                        help='Start remote masternodes configured in masternode.conf (<mode>: 'all', 'missing', 'disabled')')
-    parser_rpc.add_argument('-get-masternode-status', action='store_true',
-                            help='Print masternode status information')
-    parser_rpc.add_argument('-get-masternode-list', action='store_true',
-                            help='Print list of all known masternodes (see masternodelist for more info)')
-    parser_rpc.add_argument('-get-masternode-winner', action='store_true',
-                            help='Print info on next masternode winner to vote for')
-    parser_rpc.add_argument('-get-masternode-winners', action='store_true',
-                            help='Print list of masternode winners')
     parser_rpc.add_argument('-masternode', nargs=1, type=MasernodeCmd, choices=list(MasernodeCmd),
                             help='masternode command')
 
