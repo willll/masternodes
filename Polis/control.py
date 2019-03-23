@@ -65,5 +65,9 @@ def rpc_control(args):
         rpc_output += "\"getbalance:\" " + json.dumps(rpc.getbalance(), indent=2)
         rpc_output += "\r\n"
 
+    if args.masternode:
+        rpc_output += "\"masternode:\" " + json.dumps(rpc.getMasternode(*list(args.masternode)), indent=2)
+        rpc_output += "\r\n"
+
     print(rpc_output)
 

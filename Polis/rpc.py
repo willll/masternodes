@@ -7,6 +7,7 @@ class RPC:
     def __init__(self, username, password, ip, port=24127):
         self.proxy = Proxy(service_url="http://{}:{}@{}:{}".format(username, password, ip, port))
 
+    # == Wallet ==
 
     def listunspent(self):
         return self.proxy.listunspent()
@@ -39,7 +40,15 @@ class RPC:
     def sendtoaddress(self, address, send):
         return self.proxy.sendtoaddress(address, send)
 
+    # == Polis ==
 
+    def getMasternode(self, *args):
+        if len(args) == 1 :
+            return self.proxy.masternode(str(args[0]))
+        elif len(args) == 2 :
+            return self.proxy.masternode(str(args[0]), str(args[1]))
+        else:
+            return self.proxy.masternode(str(args[0]), str(args[1]), str(args[2]))
 
     '''
     
