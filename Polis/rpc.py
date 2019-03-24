@@ -42,13 +42,8 @@ class RPC:
 
     # == Polis ==
 
-    def getMasternode(self, *args):
-        if len(args) == 1 :
-            return self.proxy.masternode(str(args[0]))
-        elif len(args) == 2 :
-            return self.proxy.masternode(str(args[0]), str(args[1]))
-        else:
-            return self.proxy.masternode(str(args[0]), str(args[1]), str(args[2]))
+    def getMasternode(self, arg):
+        return self.proxy.masternode(arg)
 
     '''
     

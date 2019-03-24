@@ -4,6 +4,7 @@ from enum import Enum
 # project imports
 import upgrade
 import control
+import masternodes
 
 '''
 main
@@ -70,7 +71,13 @@ def main():
     parser_rpc.add_argument('-masternode', nargs=1, type=MasernodeCmd, choices=list(MasernodeCmd),
                             help='masternode command')
 
-
+    parser_deploy = subparsers.add_parser('deploy')
+    parser_deploy.add_argument('-c', '--config', nargs='?', default="config.json",
+                            help='config file in Json format')
+    parser_deploy.add_argument('-listInputs', nargs='+', type=int,
+                            help='List of inputs to use, see listunspent')
+    parser_deploy.add_argument('-listVPS', nargs='+', type=int,
+                               help='List of VPSs to use, see masternodeStatus')
 
     args = parser.parse_args()
 
@@ -78,6 +85,8 @@ def main():
         upgrade.masternode(args)
     elif args.command == 'rpc':
         control.rpc_control(args)
+    elif args.command == 'deploy':
+        masternodes.masternodes_deploy(args)
 
 
 if __name__ == '__main__':

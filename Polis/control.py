@@ -50,12 +50,25 @@ def rpc_control(args):
         args.listlockunspent = True
 
     if args.listunspent:
-        rpc_output += "\"listunspent:\" " + json.dumps(rpc.listunspent(), indent=2)
-        rpc_output += "\r\n"
+        rest = rpc.listunspent()
+        rpc_output += "\"listunspent:\" " + "\r\n"
+        cpt = 0
+        for itr in rest :
+            if itr['spendable'] and itr['solvable']:
+                rpc_output += str(cpt) + " : "
+                rpc_output += str(itr['txid']) + " : " + str(itr['amount'])
+                rpc_output += "\r\n"
+            cpt += 1
 
     if args.listlockunspent:
-        rpc_output += "\"listlockunspent:\" " + json.dumps(rpc.listlockunspent(), indent=2)
-        rpc_output += "\r\n"
+        rest = rpc.listlockunspent()
+        rpc_output += "\"listlockunspent:\" " + "\r\n"
+        cpt = 0
+        for itr in rest:
+            rpc_output += str(cpt) + " : "
+            rpc_output += str(itr['txid'])
+            rpc_output += "\r\n"
+            cpt += 1
 
     if args.listaccounts:
         rpc_output += "\"listaccounts:\" " + json.dumps(rpc.listaccounts(), indent=2)
@@ -66,7 +79,7 @@ def rpc_control(args):
         rpc_output += "\r\n"
 
     if args.masternode:
-        rpc_output += "\"masternode:\" " + json.dumps(rpc.getMasternode(*list(args.masternode)), indent=2)
+        rpc_output += "\"masternode:\" " + json.dumps(rpc.getMasternode(*str(args.masternode[0])), indent=2)
         rpc_output += "\r\n"
 
     print(rpc_output)
