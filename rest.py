@@ -294,6 +294,37 @@ with app.subroute("/sys") as sys:
         coin = Polis(config["Polis"])
         return json.dumps({"result": VPS(config["masternodes"][mnidx], coin).actions("ps", coin).splitlines()})
 
+with app.subroute("/local") as local:
+    @local.route('/listinputs', methods=['GET'])
+    def listinputs(request):
+        '''
+        Serve the local wallet SPA
+
+        listunspent output:
+         {
+            "txid": "f7ac7a85ffebd1d1b9b88a0b90bdd499bbc56e50bd87ff48a8f30ae8d514dc03",
+            "vout": 1,
+            "address": "PNqJf93FfA7dfvQUhpG5oYwHxQgSXcuhev",
+            "scriptPubKey": "76a9149c3dd8f6ced8d6748c7eb93eb6c6a69d2858621d88ac",
+            "amount": 2517.85999774,
+            "confirmations": 574,
+            "spendable": true,
+            "solvable": true,
+            "ps_rounds": -2
+          },
+
+        :param request:
+        :return:
+        '''
+        template="coincontrol.html"
+
+        rpc = RPC(config["Polis"]["wallet"]["username"],
+                  config["Polis"]["wallet"]["password"],
+                  config["Polis"]["wallet"]["ip"],
+                  config["Polis"]["wallet"]["port"])
+        li = rpc.listunspent()
+
+        return render_without_request(template, masternodes=li)
 '''
 Sub routes pertaining to polis-cli actions
 '''
@@ -357,6 +388,15 @@ with app.subroute("/mns") as mns:
         request.redirect(redirect)
         return None
 
+
+    @mns.route('/local/<int:command>/<user>/<pass>', method=['GET'])
+    def local_daemon(request, command, param):
+        from Polis import rpc
+
+        r = rpc.RPC( username, password, ip, port )
+
+        return
+
     '''
     Asynchronously do an action part of available actions:
     actidx: the action
@@ -376,8 +416,6 @@ with app.subroute("/mns") as mns:
         client_id = random.randrange(1, 10005)
         msg = {'id':client_id, 'mnidx':mnidx, 'actidx':actidx}
         socket.send_json(json.dumps(msg))
-        r = socket.recv_json()
-        print(f"Received from port {r}")
 
         '''
         coin = Polis(config["Polis"])

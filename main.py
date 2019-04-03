@@ -49,36 +49,20 @@ def setup_zmq():
         backend.close()
         context.term()
 
-def ws_handler():
-    '''
-    This process should get message from zmq and send it to front end via ws
-
-    :return:
-    '''
-
-
-    from websocket import WebSocketServerFactory, MyServerProtocol
-    from twisted.internet import reactor
-
-    factory = WebSocketServerFactory(u"ws://127.0.0.1:9001")
-    factory.protocol = MyServerProtocol
-    # factory.setProtocolOptions(maxConnections=2)
-
-    # note to self: if using putChild, the child must be bytes...
-
-    reactor.listenTCP(9001, factory)
-    reactor.run()
 
 
 def cli_action(mnidx, actidx, reqid):
-    '''
+    """
     This should not be here,
     but while i figure out structure it should work.
 
     This process takes care of actions that will block because of SSH
 
+    :param mnidx:
+    :param actidx:
+    :param reqid:
     :return:
-    '''
+    """
 
     from coin import Polis
     from vps import VPS
@@ -92,38 +76,35 @@ def cli_action(mnidx, actidx, reqid):
 
     result = vps.async_cli(actions[actidx], coin)
 
-    #use new push/pull queue for websocket results
-    port = "5570"
+    port = "5561"
     context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.bind(f"tcp://127.0.0.1:{port}")
+    socket = context.socket(zmq.REQ)
+    socket.connect(f"tcp://localhost:{port}")
 
     msg = {'id': reqid, 'mnidx': mnidx, 'actidx': actidx, 'result': result}
-    socket.send_string(json.dumps(msg))
+    socket.send_json(msg)
+    print(f"Submitted message {msg} to ROUTER")
 
     #should clean up by exiting process here?
     return result
 
 
 def server():
-    '''
+    """
     This process should read the queue for blocking REST requests and start a
     process to deal with it and send results to websocket handler
 
     :return:
-    '''
+    """
     port = "5560"
     context = zmq.Context()
     socket = context.socket(zmq.REP)
     socket.connect("tcp://localhost:%s" % port)
-    procs = {}
-
 
 
     while True:
         #  Wait for next request from client
         message = socket.recv_json()
-        print(f"Received request: {message}")
 
         params = json.loads(message)
 
@@ -134,8 +115,11 @@ def server():
 
 
 if __name__ == '__main__':
+
+    from websocket import ws_handler, setup_ws_zmq
     #start queue broker
     Process(target=setup_zmq).start()
+    Process(target=setup_ws_zmq).start()
 
     #start some SSH REST request workers:
     Process(target=server).start()
