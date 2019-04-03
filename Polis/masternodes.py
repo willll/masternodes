@@ -30,7 +30,7 @@ def init(args):
 control
 '''
 
-def rpc_control(args):
+def masternodes_deploy(args):
     init(args)
 
     # Load configuration file

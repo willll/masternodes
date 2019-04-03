@@ -1,12 +1,26 @@
 import argparse
+from enum import Enum
 
 # project imports
 import upgrade
 import control
+import masternodes
 
 '''
 main
 '''
+
+class MasernodeCmd(Enum):
+    current = 'current'
+    genkey = 'genkey'
+    status = 'status'
+    outputs = 'outputs'
+    winner = 'winner'
+    winners = 'winners'
+    list = 'list'
+
+    def __str__(self):
+        return self.value
 
 
 def main():
@@ -38,6 +52,7 @@ def main():
     parser_rpc = subparsers.add_parser('rpc')
     parser_rpc.add_argument('-c', '--config', nargs='?', default="config.json",
                                    help='config file in Json format')
+    #== Wallet ==
     parser_rpc.add_argument('-lstx', action='store_true',
                             help='list inputs')
     parser_rpc.add_argument('-listunspent', action='store_true',
@@ -48,7 +63,21 @@ def main():
                             help='Returns Object that has account names as keys, account balances as values.')
     parser_rpc.add_argument('-getbalance', action='store_true',
                             help='returns the server\'s total available balance.')
+    #== Polis ==
+    parser_rpc.add_argument('-masternode-start-alias', action='store_true',
+                            help='Start single remote masternode by assigned alias configured in masternode.conf')
+    #parser_rpc.add_argument('-masternode-start-<mode> ', action='store_true',
+    #                        help='Start remote masternodes configured in masternode.conf (<mode>: 'all', 'missing', 'disabled')')
+    parser_rpc.add_argument('-masternode', nargs=1, type=MasernodeCmd, choices=list(MasernodeCmd),
+                            help='masternode command')
 
+    parser_deploy = subparsers.add_parser('deploy')
+    parser_deploy.add_argument('-c', '--config', nargs='?', default="config.json",
+                            help='config file in Json format')
+    parser_deploy.add_argument('-listInputs', nargs='+', type=int,
+                            help='List of inputs to use, see listunspent')
+    parser_deploy.add_argument('-listVPS', nargs='+', type=int,
+                               help='List of VPSs to use, see masternodeStatus')
 
     args = parser.parse_args()
 
@@ -56,6 +85,8 @@ def main():
         upgrade.masternode(args)
     elif args.command == 'rpc':
         control.rpc_control(args)
+    elif args.command == 'deploy':
+        masternodes.masternodes_deploy(args)
 
 
 if __name__ == '__main__':
