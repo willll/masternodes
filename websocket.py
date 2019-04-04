@@ -1,14 +1,16 @@
 #  https://github.com/crossbario/autobahn-python/blob/master/examples/twisted/websocket/echo/server.py
 
 from autobahn.twisted.websocket import WebSocketServerProtocol, \
-    WebSocketServerFactory
+    WebSocketServerFactory, listenWS
 import json
 import zmq
+import sys
+
+from twisted.internet import reactor
+from twisted.python import log
 
 
 class MyServerProtocol(WebSocketServerProtocol):
-
-
     def onConnect(self, request):
         context = zmq.Context.instance()
         self.socket = context.socket(zmq.REP)
@@ -95,10 +97,29 @@ class BroadcastServerFactory(WebSocketServerFactory):
         self.clients = []
         self.tickcount = 0
         self.tick()
+        '''
+        context = zmq.Context.instance()
+        self.socket = context.socket(zmq.REP)
+
+        self.socket.connect("tcp://*:5562")
+        '''
+
+
 
     def tick(self):
         self.tickcount += 1
-        self.broadcast("tick %d from server" % self.tickcount)
+        '''
+        message = self.socket.recv_json()
+
+        print(f"Reading from workers quque {message}")
+        params = json.dumps(message)
+        '''
+        message = {"id":"MN STATUS", "mnid":"1",  "msg": f"masternode started successfully"}
+        self.broadcast(json.dumps(message))
+        '''
+        self.broadcast(f"Data: {params}")
+
+        '''
         reactor.callLater(1, self.tick)
 
     def register(self, client):
@@ -135,22 +156,30 @@ def ws_handler():
     - when there is an event, broadcast it.
 
     :return:
+    `
     """
-    server = web.Application([
-        (r'/websocket', WebSocket),
-    ])
-    server.listen(PORT)
 
-    from twisted.internet import reactor
+    log.startLogging(sys.stdout)
 
-    factory = WebSocketServerFactory(u"wss://127.0.0.1:9001")
-    factory.protocol = MyServerProtocol
+    ServerFactory = BroadcastServerFactory
+    # ServerFactory = BroadcastPreparedServerFactory
+
+    factory = ServerFactory(u"ws://127.0.0.1:9001")
+    factory.protocol = BroadcastServerProtocol
+    listenWS(factory)
+
+    reactor.run()
+
+
+#################old
+#    factory = WebSocketServerFactory(u"ws://127.0.0.1:9001")
+#    factory.protocol = MyServerProtocol
     # factory.setProtocolOptions(maxConnections=2)
 
     # note to self: if using putChild, the child must be bytes...
 
-    reactor.listenTCP(9001, factory)
-    reactor.run()
+#    reactor.listenTCP(9001, factory)
+#    reactor.run()
 
 
 

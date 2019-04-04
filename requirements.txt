@@ -28,3 +28,4 @@ pyzmq
 psutil
 pymemcache
 autobahn
+jwt

@@ -7,6 +7,8 @@
     <script src="/js/popper.min.js"></script>
     <script src="/js/reconnecting-websockets.min.js"></script>
     <script src="/js/websocket.js"></script>
+    <script src="/js/cookie.js"></script>
+    <script src="/js/user.js"></script>
     </body>
     <style>
         #output{
@@ -31,7 +33,11 @@
     <link href="/static/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-dark text-white">
-
+<ul>
+  <li><b>User: </b><span id="username"></span></li>
+  <li><b>WebSocket Connection: </b><span id="connected">Offline</span></li>
+  <li><b>WebSocket Authenticated: </b><span id="authenticated">No</span></li>
+</ul>
 <br/>
 <button id="updateAll">Update all</button>
 <button id="getinfoAll">getinfo all</button>
@@ -102,21 +108,24 @@
   </div>
 </div>
 
-<ul>
-  <li><b>User: </b><span id="username"></span></li>
-  <li><b>WebSocket Connection: </b><span id="connected">Offline</span></li>
-  <li><b>WebSocket Authenticated: </b><span id="authenticated">No</span></li>
-</ul>
+
 
 <script type=text/javascript>
 
 
 function messageHandler(data) {
+    console.log("message handler called with: ")
+    console.log(data)
     switch (data["id"]) {
-      case "EXAMPLE ID":
-        /* Do something when a message with "EXAMPLE ID" arrives */
-        console.log('EXAMPLE ID spotted');
+      case "MN STATUS":
+        console.log('updating masternode status to: '+data["msg"]);
+        console.log(data["mnid"])
         break;
+      case "MN BLOCK":
+        console.log('updating masternode status to: '+data["msg"]);
+        console.log(data["mnid"])
+        break;
+      /* deal with each update case here */
       default:
         console.log('Unknown message ' + JSON.stringify(data) + ' arrived');
       }
@@ -430,9 +439,7 @@ var BLOCKHEIGHT = 0
        incoming messages */
     // Note: you should be running SSL and change this to wss
 
-    ws = createSocket("wss://" + {{ request.host|tojson|safe }} + "/websocket",
-                      messageHandler
-    );
+    ws = createSocket("ws://127.0.0.1:9001", messageHandler );
 
     $("#username").empty().append($USER);
 
@@ -456,8 +463,6 @@ var BLOCKHEIGHT = 0
       getBlockHeight(1);
       updateAll();
       getinfoAll();
-
-      pingWs();
 
     });
 
