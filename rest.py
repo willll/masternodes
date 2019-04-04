@@ -12,6 +12,9 @@ from pymemcache.client import base
 import  zmq
 import random
 
+#JSON web token, used for reconnecting websockets
+import jwt
+
 client = base.Client(('localhost', 11211))
 
 app = Klein()
@@ -27,8 +30,17 @@ def hello_world(request):
 
 @app.route('/test/<int:mnidx>')
 def test(request, mnidx):
-
     return client.get('mnstat{}'.format(mnidx))
+
+
+@app.route('/socket_auth_token', methods=['GET'])
+def socket_auth_token():
+    '''
+    Necessary for JWT
+
+    :return:
+    '''
+    return jwt.encode({'username': get_username()}, app.secret_key)
 
 
 '''
@@ -295,6 +307,23 @@ with app.subroute("/sys") as sys:
         return json.dumps({"result": VPS(config["masternodes"][mnidx], coin).actions("ps", coin).splitlines()})
 
 with app.subroute("/local") as local:
+
+    @local.route('/cmd/<int:command>', methods=['GET'])
+    def local_daemon(request, command, param):
+        '''
+        Command for local wallet
+
+        :param request:
+        :param command:
+        :param param:
+        :return:
+        '''
+        from Polis import rpc
+
+
+        return None
+
+
     @local.route('/listinputs', methods=['GET'])
     def listinputs(request):
         '''
@@ -389,13 +418,6 @@ with app.subroute("/mns") as mns:
         return None
 
 
-    @mns.route('/local/<int:command>/<user>/<pass>', method=['GET'])
-    def local_daemon(request, command, param):
-        from Polis import rpc
-
-        r = rpc.RPC( username, password, ip, port )
-
-        return
 
     '''
     Asynchronously do an action part of available actions:

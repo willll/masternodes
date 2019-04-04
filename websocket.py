@@ -48,13 +48,14 @@ def setup_ws_zmq():
     try:
         context = zmq.Context()
         # Socket facing clients
-        frontend = context.socket(zmq.XREQ)
-        frontend.bind("tcp://*:5561")
-        # Socket facing services
-        backend = context.sockt(zmq.XREP)
-        backend.bind("tcp://*:5562")
+        feed_in = context.socket(zmq.XPUB)
+        feed_in.bind("ipc://ws_update_in")
 
-        zmq.proxy(frontend, backend)
+        # Socket facing services
+        feed_out = context.socket(zmq.XSUB)
+        feed_out.bind("ipc://ws_update_out")
+
+        zmq.proxy(feed_in, feed_out)
         #zmq.device(zmq.QUEUE, frontend, backend)
     except Exception as e:
 
@@ -67,16 +68,82 @@ def setup_ws_zmq():
         context.term()
 
 
+class BroadcastServerProtocol(WebSocketServerProtocol):
+
+    def onOpen(self):
+        self.factory.register(self)
+
+    def onMessage(self, payload, isBinary):
+        if not isBinary:
+            msg = "{} from {}".format(payload.decode('utf8'), self.peer)
+            self.factory.broadcast(msg)
+
+    def connectionLost(self, reason):
+        WebSocketServerProtocol.connectionLost(self, reason)
+        self.factory.unregister(self)
+
+
+class BroadcastServerFactory(WebSocketServerFactory):
+
+    """
+    Simple broadcast server broadcasting any message it receives to all
+    currently connected clients.
+    """
+
+    def __init__(self, url):
+        WebSocketServerFactory.__init__(self, url)
+        self.clients = []
+        self.tickcount = 0
+        self.tick()
+
+    def tick(self):
+        self.tickcount += 1
+        self.broadcast("tick %d from server" % self.tickcount)
+        reactor.callLater(1, self.tick)
+
+    def register(self, client):
+        if client not in self.clients:
+            print("registered client {}".format(client.peer))
+            self.clients.append(client)
+
+    def unregister(self, client):
+        if client in self.clients:
+            print("unregistered client {}".format(client.peer))
+            self.clients.remove(client)
+
+    def broadcast(self, msg):
+        print("broadcasting message '{}' ..".format(msg))
+        for c in self.clients:
+            c.sendMessage(msg.encode('utf8'))
+            print("message sent to {}".format(c.peer))
+
+
+
+
+
 def ws_handler():
     """
     This process should get message from zmq and send it to front end via ws
 
+    Getting complicated with twisted, this is how you broadcast:
+    https://github.com/crossbario/autobahn-python/blob/master/examples/twisted/websocket/broadcast/server.py
+
+    trying to follow example done with tornado:
+    https://github.com/cesium-ml/message_flow/blob/master/websocket_server.py
+
+    - have an IOLoop expecting events on the zmq socket
+    - when there is an event, broadcast it.
+
     :return:
     """
+    server = web.Application([
+        (r'/websocket', WebSocket),
+    ])
+    server.listen(PORT)
 
     from twisted.internet import reactor
 
-    factory = WebSocketServerFactory(u"ws://127.0.0.1:9001")
+    factory = WebSocketServerFactory(u"wss://127.0.0.1:9001")
     factory.protocol = MyServerProtocol
     # factory.setProtocolOptions(maxConnections=2)
 

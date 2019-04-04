@@ -83,7 +83,6 @@ def cli_action(mnidx, actidx, reqid):
 
     msg = {'id': reqid, 'mnidx': mnidx, 'actidx': actidx, 'result': result}
     socket.send_json(msg)
-    print(f"Submitted message {msg} to ROUTER")
 
     #should clean up by exiting process here?
     return result

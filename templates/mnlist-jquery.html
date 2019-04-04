@@ -5,6 +5,8 @@
     <script src="/js/jquery.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>
     <script src="/js/popper.min.js"></script>
+    <script src="/js/reconnecting-websockets.min.js"></script>
+    <script src="/js/websocket.js"></script>
     </body>
     <style>
         #output{
@@ -31,44 +33,6 @@
 <body class="bg-dark text-white">
 
 <br/>
-
-<!--
-<div class="container">
-  <div class="row">
-    <div class="col">
-      <input class="form-control" id="myInput" type="text" placeholder="Search..">
-    </div>
-    <div class="row">
-      <div class="col">
-        <button id="updateAll">Update all</button>
-      </div>
-    </div>
-  </div>
-  {% for item in masternodes %}
-  <div class="row">
-    <div class="col">
-        <span class="{{item.cnx}}">{{ item.cnx }}</span>
-    </div>
-    <div class="col">
-        <select class='action'>
-            <option selected>None</option>
-            <option id='install_{{ item.idx }}'>Install watcher</option>
-            <option id='update_{{ item.idx }}'>Update status</option>
-            <option id='restart_{{ item.idx }}'>Restart</option>
-            <option id='reindex_{{ item.idx }}'>Reindex</option>
-        </select>
-        <a class='mnsync_status btn btn-info btn-xs' href='#' id='mnsyncstatus_{{ item.idx }}'><i title="mnsync status" class="fas fa-charging-station"></i></a>
-        <a class='getinfo btn btn-info btn-xs' href='#' id='getinfo_{{ item.idx }}'><i title="getinfo" class="fas fa-info"></i></a>
-        <a class='getcron btn btn-info btn-xs' href='#' id='getcron_{{ item.idx }}'><i title="Get crontab" class="fas fa-business-time"></i></a>
-        <a class='getconfig btn btn-info btn-xs' href='#' id='getconfig_{{ item.idx }}'><i title="Get config" class="fas fa-cog"></i></a>
-        <div class='display_getinfo' id='display_getinfo_{{item.idx}}'></div>
-        <div class='status' id='status_{{item.idx}}'></div>
-    </div>
-  </div>
- {% endfor %}
-</div>
--->
-
 <button id="updateAll">Update all</button>
 <button id="getinfoAll">getinfo all</button>
 <table class="table table-striped table-bordered table-dark table-sm table-hover">
@@ -138,7 +102,31 @@
   </div>
 </div>
 
+<ul>
+  <li><b>User: </b><span id="username"></span></li>
+  <li><b>WebSocket Connection: </b><span id="connected">Offline</span></li>
+  <li><b>WebSocket Authenticated: </b><span id="authenticated">No</span></li>
+</ul>
+
 <script type=text/javascript>
+
+
+function messageHandler(data) {
+    switch (data["id"]) {
+      case "EXAMPLE ID":
+        /* Do something when a message with "EXAMPLE ID" arrives */
+        console.log('EXAMPLE ID spotted');
+        break;
+      default:
+        console.log('Unknown message ' + JSON.stringify(data) + ' arrived');
+      }
+};
+
+
+
+
+
+
 /* global */
 var ws_port = 9001
 
@@ -173,71 +161,6 @@ var BLOCKHEIGHT = 0
             }
         })
     }
-
-    /* websocket connect */
-
-     var socket = null;
-     var isopen = false;
-     function ws_setup() {
-        console.log("Connecting to websocket")
-        socket = new WebSocket("ws://127.0.0.1:"+ws_port);
-        socket.binaryType = "arraybuffer";
-        socket.onopen = function() {
-           console.log("Connected!");
-           isopen = true;
-        }
-        socket.onmessage = function(e) {
-            console.log("Got message on websocket")
-           if (typeof e.data == "string") {
-              console.log("Text message received: " + e.data);
-              /*
-
-
-               Deal with Websocket data here.
-
-
-              */
-           } else {
-              var arr = new Uint8Array(e.data);
-              var hex = '';
-              for (var i = 0; i < arr.length; i++) {
-                 hex += ('00' + arr[i].toString(16)).substr(-2);
-              }
-              console.log("Binary message received: " + hex);
-           }
-        }
-        socket.onclose = function(e) {
-           console.log("Connection closed.");
-           socket = null;
-           isopen = false;
-        }
-     };
-     function sendText() {
-        if (isopen) {
-           socket.send("Hello, world!");
-           console.log("Text message sent.");
-        } else {
-           console.log("Connection not opened.")
-        }
-     };
-     function sendBinary() {
-        if (isopen) {
-           var buf = new ArrayBuffer(32);
-           var arr = new Uint8Array(buf);
-           for (i = 0; i < arr.length; ++i) arr[i] = i;
-           socket.send(buf);
-           console.log("Binary message sent.");
-        } else {
-           console.log("Connection not opened.")
-        }
-     };
-
-     function pingWs()
-     {
-     console.log("Pinging ws")
-        sendText()
-     }
-
 
 
     function installScript(id)
@@ -497,8 +420,39 @@ var BLOCKHEIGHT = 0
     });
 
   $( document ).ready(function() {
-      console.log("Document ready")
-      ws_setup();
+
+
+    /* Fake username insertion.  Remove this when using in the real
+    world, and get the username from the Flask context. */
+    $USER = readCookie("username") || generateUserCookie();
+
+    /* Set up the WebSocket, and tell it which function will handle
+       incoming messages */
+    // Note: you should be running SSL and change this to wss
+
+    ws = createSocket("wss://" + {{ request.host|tojson|safe }} + "/websocket",
+                      messageHandler
+    );
+
+    $("#username").empty().append($USER);
+
+    /* Setup up the submission form behavior */
+    $("#messageForm").submit(function(event) {
+      event.preventDefault();
+      $.post($SCRIPT_ROOT + "/send",
+             {message: $('input[name="message"]').val()})
+             .success(function(result) {
+               $("#result").append('<li><b>' + getTime() + '</b>' + ' [' +
+                                   result['status'] + '] ' + result['data'] + '</li>');
+             })
+             .error(function(e) {
+               $("#result").append('<li><b>' + e.statusText + '</b></li>');
+             } );
+      return false;
+    });
+
+
+
       getBlockHeight(1);
       updateAll();
       getinfoAll();
