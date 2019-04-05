@@ -9,8 +9,11 @@ import sys
 from twisted.internet import reactor
 from twisted.python import log
 
-
+'''
+remove class once broadcast is fixed and finishes 
+'''
 class MyServerProtocol(WebSocketServerProtocol):
+
     def onConnect(self, request):
         context = zmq.Context.instance()
         self.socket = context.socket(zmq.REP)
@@ -96,13 +99,12 @@ class BroadcastServerFactory(WebSocketServerFactory):
         WebSocketServerFactory.__init__(self, url)
         self.clients = []
         self.tickcount = 0
-        self.tick()
-        '''
-        context = zmq.Context.instance()
-        self.socket = context.socket(zmq.REP)
 
-        self.socket.connect("tcp://*:5562")
-        '''
+        context = zmq.Context.instance()
+        self.socket = context.socket(zmq.SUB)
+        self.socket.connect("ipc://ws_update_in")
+
+        self.tick()
 
 
 
@@ -113,14 +115,13 @@ class BroadcastServerFactory(WebSocketServerFactory):
 
         print(f"Reading from workers quque {message}")
         params = json.dumps(message)
+        message = {"id":"MN STATUS", "mnid":"1",  "msg": params}
         '''
-        message = {"id":"MN STATUS", "mnid":"1",  "msg": f"masternode started successfully"}
+        message = {"id":"MN STATUS", "mnid":"1"}
         self.broadcast(json.dumps(message))
-        '''
-        self.broadcast(f"Data: {params}")
+        #self.broadcast(f"Data: {params}")
 
-        '''
-        reactor.callLater(1, self.tick)
+        reactor.callLater(3, self.tick)
 
     def register(self, client):
         if client not in self.clients:

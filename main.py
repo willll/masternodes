@@ -76,10 +76,9 @@ def cli_action(mnidx, actidx, reqid):
 
     result = vps.async_cli(actions[actidx], coin)
 
-    port = "5561"
     context = zmq.Context()
-    socket = context.socket(zmq.REQ)
-    socket.connect(f"tcp://localhost:{port}")
+    socket = context.socket(zmq.PUB)
+    socket.connect("ipc://ws_update_out")
 
     msg = {'id': reqid, 'mnidx': mnidx, 'actidx': actidx, 'result': result}
     socket.send_json(msg)

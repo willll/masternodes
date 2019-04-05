@@ -9,8 +9,9 @@ from config import config,logging
 
 from pymemcache.client import base
 
-import  zmq
+import zmq
 import random
+
 
 #JSON web token, used for reconnecting websockets
 import jwt
@@ -307,6 +308,7 @@ with app.subroute("/sys") as sys:
         return json.dumps({"result": VPS(config["masternodes"][mnidx], coin).actions("ps", coin).splitlines()})
 
 with app.subroute("/local") as local:
+    from Polis import rpc
 
     @local.route('/cmd/<int:command>', methods=['GET'])
     def local_daemon(request, command, param):
@@ -318,7 +320,6 @@ with app.subroute("/local") as local:
         :param param:
         :return:
         '''
-        from Polis import rpc
 
 
         return None
@@ -347,11 +348,11 @@ with app.subroute("/local") as local:
         '''
         template="coincontrol.html"
 
-        rpc = RPC(config["Polis"]["wallet"]["username"],
+        rpc_cnx = rpc.RPC(config["Polis"]["wallet"]["username"],
                   config["Polis"]["wallet"]["password"],
                   config["Polis"]["wallet"]["ip"],
                   config["Polis"]["wallet"]["port"])
-        li = rpc.listunspent()
+        li = rpc_cnx.listunspent()
 
         return render_without_request(template, masternodes=li)
 '''
