@@ -78,9 +78,10 @@ def cli_action(mnidx, actidx, reqid):
 
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
-    socket.connect("ipc://ws_update_out")
+    socket.connect("ipc://ws_update_in")
 
     msg = {'id': reqid, 'mnidx': mnidx, 'actidx': actidx, 'result': result}
+    print(f"Sending message on ZMQ: {json.dumps(msg)}")
     socket.send_json(msg)
 
     #should clean up by exiting process here?

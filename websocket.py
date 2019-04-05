@@ -6,7 +6,7 @@ import json
 import zmq
 import sys
 
-from twisted.internet import reactor
+from twisted.internet import reactor, defer, task
 from twisted.python import log
 
 '''
@@ -63,13 +63,12 @@ def setup_ws_zmq():
         zmq.proxy(feed_in, feed_out)
         #zmq.device(zmq.QUEUE, frontend, backend)
     except Exception as e:
-
         print(e)
         print("bringing down zmq device")
     finally:
         pass
-        frontend.close()
-        backend.close()
+        feed_in.close()
+        feed_out.close()
         context.term()
 
 
@@ -102,26 +101,29 @@ class BroadcastServerFactory(WebSocketServerFactory):
 
         context = zmq.Context.instance()
         self.socket = context.socket(zmq.SUB)
-        self.socket.connect("ipc://ws_update_in")
+        self.socket.connect("ipc://ws_update_out")
 
-        self.tick()
+        #message = self.socket.recv_json()
+        #self.broadcast(message)
 
+        d = task.deferLater(reactor, 0, self.socket.recv_json)
+        d.addCallback(self.broadcast)
 
 
     def tick(self):
         self.tickcount += 1
-        '''
-        message = self.socket.recv_json()
 
-        print(f"Reading from workers quque {message}")
-        params = json.dumps(message)
-        message = {"id":"MN STATUS", "mnid":"1",  "msg": params}
-        '''
-        message = {"id":"MN STATUS", "mnid":"1"}
-        self.broadcast(json.dumps(message))
-        #self.broadcast(f"Data: {params}")
+        #message = socket.recv_json()
 
-        reactor.callLater(3, self.tick)
+
+        print(f"Reading from workers quque ")
+        # params = json.dumps(message)
+
+        #message = {"id":"MN STATUS", "mnid":"1",  "msg": params}
+        #message = {"id":"MN STATUS", "mnid":"1"}
+        #self.broadcast(json.dumps(message))
+
+        reactor.callLater(5, self.tick)
 
     def register(self, client):
         if client not in self.clients:
@@ -134,10 +136,19 @@ class BroadcastServerFactory(WebSocketServerFactory):
             self.clients.remove(client)
 
     def broadcast(self, msg):
-        print("broadcasting message '{}' ..".format(msg))
+        print("broadcasting message ---- '{}' ..".format(msg))
         for c in self.clients:
             c.sendMessage(msg.encode('utf8'))
-            print("message sent to {}".format(c.peer))
+            #print("message sent to {}".format(c.peer))
+
+
+
+
+
+class BroadcastPreparedServerFactory(BroadcastServerFactory):
+    '''
+    Wrap our broadcast with zmq
+    '''
 
 
 
@@ -159,9 +170,23 @@ def ws_handler():
     :return:
     `
     """
+    #from txzmq import ZmqEndpoint, ZmqFactory, ZmqPubConnection, ZmqSubConnection
 
     log.startLogging(sys.stdout)
 
+    '''
+    zf = ZmqFactory()
+    e = ZmqEndpoint("connect", "ipc://ws_update_out")
+
+    s = ZmqSubConnection(zf, e)
+    s.subscribe(b"")
+    print("Subscribed to ZMQ ")
+
+    def subZMQ(*args):
+        print(f"reading ZMQ and BROADCASTING ################## : {args}")
+
+    s.gotMessage = subZMQ
+    '''
     ServerFactory = BroadcastServerFactory
     # ServerFactory = BroadcastPreparedServerFactory
 
