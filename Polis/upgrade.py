@@ -276,7 +276,7 @@ def masternode(args):
                     vps.install_vps(connection)
 
                 # Create directory if does not exist
-                polis.create_polis_directory()
+                polis.create_polis_directory(target_directory)
 
                 # Stop the daemon if running
                 polis.stop_daemon()
