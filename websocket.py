@@ -99,22 +99,10 @@ class BroadcastServerFactory(WebSocketServerFactory):
         self.clients = []
         self.tickcount = 0
 
-        context = zmq.Context.instance()
-        self.socket = context.socket(zmq.SUB)
-        self.socket.connect("ipc://ws_update_out")
-
-        #message = self.socket.recv_json()
-        #self.broadcast(message)
-
-        d = task.deferLater(reactor, 0, self.socket.recv_json)
-        d.addCallback(self.broadcast)
-
-
     def tick(self):
         self.tickcount += 1
 
         #message = socket.recv_json()
-
 
         print(f"Reading from workers quque ")
         # params = json.dumps(message)
@@ -136,6 +124,7 @@ class BroadcastServerFactory(WebSocketServerFactory):
             self.clients.remove(client)
 
     def broadcast(self, msg):
+        print("Broadcasting !!!!!!!!!!!")
         print("broadcasting message ---- '{}' ..".format(msg))
         for c in self.clients:
             c.sendMessage(msg.encode('utf8'))
@@ -170,11 +159,17 @@ def ws_handler():
     :return:
     `
     """
-    #from txzmq import ZmqEndpoint, ZmqFactory, ZmqPubConnection, ZmqSubConnection
+    from txzmq import ZmqEndpoint, ZmqFactory, ZmqPubConnection, ZmqSubConnection
 
     log.startLogging(sys.stdout)
 
-    '''
+    ServerFactory = BroadcastServerFactory
+    # ServerFactory = BroadcastPreparedServerFactory
+
+    factory = ServerFactory(u"ws://127.0.0.1:9001")
+    factory.protocol = BroadcastServerProtocol
+    listenWS(factory)
+
     zf = ZmqFactory()
     e = ZmqEndpoint("connect", "ipc://ws_update_out")
 
@@ -184,15 +179,21 @@ def ws_handler():
 
     def subZMQ(*args):
         print(f"reading ZMQ and BROADCASTING ################## : {args}")
+        ServerFactory.broadcast(args)
 
     s.gotMessage = subZMQ
     '''
-    ServerFactory = BroadcastServerFactory
-    # ServerFactory = BroadcastPreparedServerFactory
+    context = zmq.Context.instance()
+    socket = context.socket(zmq.SUB)
+    socket.connect("ipc://ws_update_out")
 
-    factory = ServerFactory(u"ws://127.0.0.1:9001")
-    factory.protocol = BroadcastServerProtocol
-    listenWS(factory)
+    # message = socket.recv_json()
+    # broadcast(message)
+
+    d = task.deferLater(reactor, 0, socket.recv_json)
+    d.addCallback(lambda ignored: BroadcastServerFactory.broadcast)
+    '''
+
 
     reactor.run()
 
