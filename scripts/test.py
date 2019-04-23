@@ -5,16 +5,6 @@ p = Proxy(service_url='http://poliscoreuser:fklafkldsjkllkfjajkfdsajlfsddafsfafs
 
 #print(p.masternode("outputs"))
 
-MN_COLLAT = 1000
-#check if theres already mn capable unspent output
-unspent = p.listunspent()
-txs = p.listtransactions()
-print("List transactions:")
-for tx in txs:
-    print(f"{tx['amount']} polis : {tx['confirmations']} confirmations")
-print(f"Got {len(unspent)} unspent outputs: ")
-
-
 def get_collat(p, unspent, pw):
     '''
     take a list of unspent outputs and return a list of 
@@ -37,16 +27,17 @@ def get_collat(p, unspent, pw):
             keys[privkey] = 1
 
         if collat > MN_COLLAT:
-            return inputs
+            return [inputs, keychain]
     return []
 
-def send_tx (p, address, qty, inputs, fee, keychain):
+def prepare_tx (p, output_address, address, qty, inputs, fee, keychain):
     '''
     send tx
 
     address = "PR85hfZMxU7i58gkTBADVAdsiPxsb4JDZh"
-    ''' 
-    outputs ={ results[0]['address'] : COLATMN, address : total-qty-fee }
+    '''
+    change = total - qty- fee
+    outputs ={ results[0]['address'] : COLATMN, address : change}
     print( outputs)
 
     tx = p.createrawtransaction(inputs, outputs)
@@ -66,6 +57,36 @@ def create_mn_output():
     retrn line for use in masternode.conf
 
     '''
+
+    password = "PASSSWORD for encrypted wallet"
+
+    output_address = p.getnewaddress()
+
+
+    MN_COLLAT = 1000
+    fee = 0.001
+    #check if theres already mn capable unspent output
+    [inputs,keychain] = p.listunspent()
+
+    '''
+    Get inputs from this function, then create the tx with  
+    then send it here.
+    '''
+
+    get_collat(p,unspent,password)
+    prepare_tx(p,output_address,address,MN_COLLAT,inputs,fee,keychain)
+
+#to be continued
+    send_tx.....
+
+    '''
+    scrap code...
+    '''
+    txs = p.listtransactions()
+    print("List transactions:")
+    for tx in txs:
+        print(f"{tx['amount']} polis : {tx['confirmations']} confirmations")
+    print(f"Got {len(unspent)} unspent outputs: ")
 
     return
 balance = 0 
