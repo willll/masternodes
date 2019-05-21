@@ -89,6 +89,10 @@ def create_mn_output():
     print(f"Got {len(unspent)} unspent outputs: ")
 
     return
+
+
+
+
 balance = 0 
 possible_mn = 0
 for u in unspent:
