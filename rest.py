@@ -9,13 +9,6 @@ from config import config,logging
 
 from pymemcache.client import base
 
-import zmq
-import random
-
-
-#JSON web token, used for reconnecting websockets
-import jwt
-
 client = base.Client(('localhost', 11211))
 
 app = Klein()
@@ -31,17 +24,8 @@ def hello_world(request):
 
 @app.route('/test/<int:mnidx>')
 def test(request, mnidx):
+
     return client.get('mnstat{}'.format(mnidx))
-
-
-@app.route('/socket_auth_token', methods=['GET'])
-def socket_auth_token():
-    '''
-    Necessary for JWT
-
-    :return:
-    '''
-    return jwt.encode({'username': get_username()}, app.secret_key)
 
 
 '''
@@ -307,54 +291,6 @@ with app.subroute("/sys") as sys:
         coin = Polis(config["Polis"])
         return json.dumps({"result": VPS(config["masternodes"][mnidx], coin).actions("ps", coin).splitlines()})
 
-with app.subroute("/local") as local:
-    from Polis import rpc
-
-    @local.route('/cmd/<int:command>', methods=['GET'])
-    def local_daemon(request, command, param):
-        '''
-        Command for local wallet
-
-        :param request:
-        :param command:
-        :param param:
-        :return:
-        '''
-
-
-        return None
-
-
-    @local.route('/listinputs', methods=['GET'])
-    def listinputs(request):
-        '''
-        Serve the local wallet SPA
-
-        listunspent output:
-         {
-            "txid": "f7ac7a85ffebd1d1b9b88a0b90bdd499bbc56e50bd87ff48a8f30ae8d514dc03",
-            "vout": 1,
-            "address": "PNqJf93FfA7dfvQUhpG5oYwHxQgSXcuhev",
-            "scriptPubKey": "76a9149c3dd8f6ced8d6748c7eb93eb6c6a69d2858621d88ac",
-            "amount": 2517.85999774,
-            "confirmations": 574,
-            "spendable": true,
-            "solvable": true,
-            "ps_rounds": -2
-          },
-
-        :param request:
-        :return:
-        '''
-        template="coincontrol.html"
-
-        rpc_cnx = rpc.RPC(config["Polis"]["wallet"]["username"],
-                  config["Polis"]["wallet"]["password"],
-                  config["Polis"]["wallet"]["ip"],
-                  config["Polis"]["wallet"]["port"])
-        li = rpc_cnx.listunspent()
-
-        return render_without_request(template, masternodes=li)
 '''
 Sub routes pertaining to polis-cli actions
 '''
@@ -418,8 +354,6 @@ with app.subroute("/mns") as mns:
         request.redirect(redirect)
         return None
 
-
-
     '''
     Asynchronously do an action part of available actions:
     actidx: the action
@@ -432,21 +366,9 @@ with app.subroute("/mns") as mns:
                    'mnss': 'mnsync status',
                    'mnsr': 'mnsync reset'}
 
-        port = "5559"
-        context = zmq.Context()
-        socket = context.socket(zmq.REQ)
-        socket.connect(f"tcp://localhost:{port}")
-        client_id = random.randrange(1, 10005)
-        msg = {'id':client_id, 'mnidx':mnidx, 'actidx':actidx}
-        socket.send_json(json.dumps(msg))
-
-        '''
         coin = Polis(config["Polis"])
         vps = VPS(config["masternodes"][mnidx], coin)
 
         result = vps.async_cli(actions[actidx], coin)
         return result
-        '''
-
-        return f"{{'status':'restart', 'client_id':'{client_id}'}}"
 

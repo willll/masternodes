@@ -1,212 +1,74 @@
-#  https://github.com/crossbario/autobahn-python/blob/master/examples/twisted/websocket/echo/server.py
+from autobahn.twisted.websocket import WebSocketServerProtocol
 
-from autobahn.twisted.websocket import WebSocketServerProtocol, \
-    WebSocketServerFactory, listenWS
-import json
-import zmq
-import sys
-
-from twisted.internet import reactor, defer, task
-from twisted.python import log
-
-'''
-remove class once broadcast is fixed and finishes 
-'''
 class MyServerProtocol(WebSocketServerProtocol):
 
+    def onMes
+
     def onConnect(self, request):
-        context = zmq.Context.instance()
-        self.socket = context.socket(zmq.REP)
-        print("Client connecting: {0}".format(request.peer))
+        '''
+        In this callback you can do things like
+
+        csage(self, payload, isBinary):
+        ## echo back message verbatim
+        self.sendMessage(payload, isBinary)
+hecking or setting cookies or other HTTP headers
+        verifying the client IP address
+        checking the origin of the WebSocket request
+        negotiate WebSocket subprotocols
+        :param request:
+        :return:
+        '''
+        print(f"Client connecting: {request.peer}")
 
     def onOpen(self):
         print("WebSocket connection open.")
 
-    def onMessage(self, payload, isBinary):
-        """
-        Query ZMQ broker for  messages and send
-        to frontend
-        :return:
-        """
-
-        port = "5562"
-        self.socket.connect("tcp://*:5562")
-
-        message = self.socket.recv_json()
-        print(f"Reading from workers quque {message}")
-        params = json.dumps(message)
-
-        self.sendMessage(params.encode('utf8'))
-
-
     def onClose(self, wasClean, code, reason):
-        print("WebSocket connection closed: {0}".format(reason))
+        '''
+
+        :param wasClean:
+        :param code:
+        :param reason:
+        :return:
+        '''
+        print(f"WebSocket connection closed: {format(reason)}")
+
+'''
+async def consumer(message):
+    print("consumer: ", message)
 
 
-def setup_ws_zmq():
-    """
-    This process is the ZMQ REQ/REP broker
-
-    :return:
-    """
-
-    try:
-        context = zmq.Context()
-        # Socket facing clients
-        feed_in = context.socket(zmq.XPUB)
-        feed_in.bind("ipc://ws_update_in")
-
-        # Socket facing services
-        feed_out = context.socket(zmq.XSUB)
-        feed_out.bind("ipc://ws_update_out")
-
-        zmq.proxy(feed_in, feed_out)
-        #zmq.device(zmq.QUEUE, frontend, backend)
-    except Exception as e:
-        print(e)
-        print("bringing down zmq device")
-    finally:
-        pass
-        feed_in.close()
-        feed_out.close()
-        context.term()
+async def producer():
+    now = datetime.datetime.utcnow().isoformat() + 'Z'
+    return (now)
 
 
-class BroadcastServerProtocol(WebSocketServerProtocol):
-
-    def onOpen(self):
-        self.factory.register(self)
-
-    def onMessage(self, payload, isBinary):
-        if not isBinary:
-            msg = "{} from {}".format(payload.decode('utf8'), self.peer)
-            self.factory.broadcast(msg)
-
-    def connectionLost(self, reason):
-        WebSocketServerProtocol.connectionLost(self, reason)
-        self.factory.unregister(self)
+async def consumer_handler(websocket):
+    while True:
+        async for message in websocket:
+            print(f"this went in glob_message: {message}")
+            await consumer(message)    #global glob_message
 
 
-class BroadcastServerFactory(WebSocketServerFactory):
-
-    """
-    Simple broadcast server broadcasting any message it receives to all
-    currently connected clients.
-    """
-
-    def __init__(self, url):
-        WebSocketServerFactory.__init__(self, url)
-        self.clients = []
-        self.tickcount = 0
-
-    def tick(self):
-        self.tickcount += 1
-
-        #message = socket.recv_json()
-
-        print(f"Reading from workers quque ")
-        # params = json.dumps(message)
-
-        #message = {"id":"MN STATUS", "mnid":"1",  "msg": params}
-        #message = {"id":"MN STATUS", "mnid":"1"}
-        #self.broadcast(json.dumps(message))
-
-        reactor.callLater(5, self.tick)
-
-    def register(self, client):
-        if client not in self.clients:
-            print("registered client {}".format(client.peer))
-            self.clients.append(client)
-
-    def unregister(self, client):
-        if client in self.clients:
-            print("unregistered client {}".format(client.peer))
-            self.clients.remove(client)
-
-    def broadcast(self, msg):
-        print("Broadcasting !!!!!!!!!!!")
-        print("broadcasting message ---- '{}' ..".format(msg))
-        for c in self.clients:
-            c.sendMessage(msg.encode('utf8'))
-            #print("message sent to {}".format(c.peer))
+async def producer_handler(websocket):
+    #global glob_message
+    while True:
+        message = await producer()
+        print("producer: ", message)
+        await websocket.send(message)
+        await asyncio.sleep(5.0)
 
 
+async def handler(websocket, path):
+    producer_task = asyncio.ensure_future(producer_handler(websocket))
+    consumer_task = asyncio.ensure_future(consumer_handler(websocket))
+    done, pending = await asyncio.wait(
+        [consumer_task, producer_task],
+        return_when=asyncio.ALL_COMPLETED,
+    )
 
+    for task in pending:
+        task.cancel()
 
-
-class BroadcastPreparedServerFactory(BroadcastServerFactory):
-    '''
-    Wrap our broadcast with zmq
-    '''
-
-
-
-
-
-def ws_handler():
-    """
-    This process should get message from zmq and send it to front end via ws
-
-    Getting complicated with twisted, this is how you broadcast:
-    https://github.com/crossbario/autobahn-python/blob/master/examples/twisted/websocket/broadcast/server.py
-
-    trying to follow example done with tornado:
-    https://github.com/cesium-ml/message_flow/blob/master/websocket_server.py
-
-    - have an IOLoop expecting events on the zmq socket
-    - when there is an event, broadcast it.
-
-    :return:
-    `
-    """
-    from txzmq import ZmqEndpoint, ZmqFactory, ZmqPubConnection, ZmqSubConnection
-
-    log.startLogging(sys.stdout)
-
-    ServerFactory = BroadcastServerFactory
-    # ServerFactory = BroadcastPreparedServerFactory
-
-    factory = ServerFactory(u"ws://127.0.0.1:9001")
-    factory.protocol = BroadcastServerProtocol
-    listenWS(factory)
-
-    zf = ZmqFactory()
-    e = ZmqEndpoint("connect", "ipc://ws_update_out")
-
-    s = ZmqSubConnection(zf, e)
-    s.subscribe(b"")
-    print("Subscribed to ZMQ ")
-
-    def subZMQ(*args):
-        print(f"reading ZMQ and BROADCASTING ################## : {args}")
-        ServerFactory.broadcast(args)
-
-    s.gotMessage = subZMQ
-    '''
-    context = zmq.Context.instance()
-    socket = context.socket(zmq.SUB)
-    socket.connect("ipc://ws_update_out")
-
-    # message = socket.recv_json()
-    # broadcast(message)
-
-    d = task.deferLater(reactor, 0, socket.recv_json)
-    d.addCallback(lambda ignored: BroadcastServerFactory.broadcast)
-    '''
-
-
-    reactor.run()
-
-
-#################old
-#    factory = WebSocketServerFactory(u"ws://127.0.0.1:9001")
-#    factory.protocol = MyServerProtocol
-    # factory.setProtocolOptions(maxConnections=2)
-
-    # note to self: if using putChild, the child must be bytes...
-
-#    reactor.listenTCP(9001, factory)
-#    reactor.run()
-
-
+'''
 
