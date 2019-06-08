@@ -40,6 +40,21 @@ class RPC:
     def sendtoaddress(self, address, send):
         return self.proxy.sendtoaddress(address, send)
 
+    def dumpprivkey(self, address, two_fa=''):
+        return self.proxy.dumpprivkey(address, two_fa)
+
+    def listaddressgroupings(self):
+        return self.proxy.listaddressgroupings()
+
+    def createrawtransaction(self, inputs, outputs):
+        return self.proxy.createrawtransaction(inputs, outputs)
+
+    def decoderawtransaction(self, tx):
+        return self.proxy.decoderawtransaction(tx)
+
+    def signrawtransaction(self, tx, previous_tx, keychain):
+        return self.proxy.signrawtransaction(tx, previous_tx, keychain)
+
     # == Polis ==
 
     def getMasternode(self, arg):
