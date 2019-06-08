@@ -6,6 +6,7 @@ import jinja2
 from coin import Coin,Polis
 from vps import VPS
 from config import config,logging
+from Polis.rpc import RPC
 
 from pymemcache.client import base
 
@@ -290,6 +291,71 @@ with app.subroute("/sys") as sys:
     def ps(request, mnidx):
         coin = Polis(config["Polis"])
         return json.dumps({"result": VPS(config["masternodes"][mnidx], coin).actions("ps", coin).splitlines()})
+
+'''
+Front end for local wallet control
+
+'''
+with app.subroute("/local") as local:
+    from Polis import rpc
+
+    @local.route('/cmd/<int:command>', methods=['GET'])
+    def local_daemon(request, command, param):
+        '''
+        Command for local wallet
+        :param request:
+        :param command:
+        :param param:
+        :return:
+        '''
+
+
+        return None
+
+    @local.route('/', methods=['GET'])
+    def local_home(request):
+
+        template="coincontrol.html"
+
+        rpc = RPC(config["Polis"]["wallet"]["username"],
+                  config["Polis"]["wallet"]["password"],
+                  config["Polis"]["wallet"]["ip"],
+                  config["Polis"]["wallet"]["port"])
+        preload = rpc.listunspent()
+        preload.append(rpc.listlockunspent())
+
+        return render_without_request(template, inputs=preload)
+
+
+
+    @local.route('/listinputs', methods=['GET'])
+    def listinputs(request):
+        '''
+        Serve the local wallet SPA
+        listunspent output:
+         {
+            "txid": "f7ac7a85ffebd1d1b9b88a0b90bdd499bbc56e50bd87ff48a8f30ae8d514dc03",
+            "vout": 1,
+            "address": "PNqJf93FfA7dfvQUhpG5oYwHxQgSXcuhev",
+            "scriptPubKey": "76a9149c3dd8f6ced8d6748c7eb93eb6c6a69d2858621d88ac",
+            "amount": 2517.85999774,
+            "confirmations": 574,
+            "spendable": true,
+            "solvable": true,
+            "ps_rounds": -2
+          },
+        :param request:
+        :return:
+        '''
+
+        rpc = RPC(config["Polis"]["wallet"]["username"],
+                  config["Polis"]["wallet"]["password"],
+                  config["Polis"]["wallet"]["ip"],
+                  config["Polis"]["wallet"]["port"])
+        li = rpc.listunspent()
+
+        return li
+
 
 '''
 Sub routes pertaining to polis-cli actions
