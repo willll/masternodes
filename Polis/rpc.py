@@ -5,7 +5,7 @@ from slickrpc import Proxy
 
 class RPC:
     def __init__(self, username, password, ip, port=24127):
-        self.proxy = Proxy(service_url="http://{}:{}@{}:{}".format(username, password, ip, port))
+        self.proxy = Proxy(service_url=f"http://{username}:{password}@{ip}:{port}")
 
     # == Wallet ==
 
