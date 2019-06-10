@@ -7,6 +7,7 @@ from coin import Coin,Polis
 from vps import VPS
 from config import config,logging
 from Polis.rpc import RPC
+from Polis.create import Create
 
 from pymemcache.client import base
 
@@ -327,6 +328,37 @@ with app.subroute("/local") as local:
         return render_without_request(template, inputs=preload)
 
 
+    @local.route('/create_tx/<int:size>', methods=['GET'])
+    def local_create_tx(request, size=1000):
+        """
+        calls create code to create a TX, by default right now should create an MN_COLLAT = 1000 sized output
+        and return the tx signed and ready to broadcast
+
+        :param request:
+        :return:
+        """
+        creator = Create('config.json', size)
+
+        [inputs, keychain, keys, total] = creator.get_collat(creator.rpc.listunspent())
+
+        [change_debug_address, mn_debug_address] = creator.get_empty_addresses(2)
+
+        tx = creator.prepare_raw_tx(mn_debug_address, change_debug_address, inputs, total)
+
+        # not used (maybe for debug)
+        decoded = creator.rpc.decoderawtransaction(tx)
+        '''
+        this part could be done on a separate "cold storage" machine with the priovate keys/ keychain
+        it uses keys from keychain to sign the tx 
+        https://bitcoin.org/en/developer-examples#complex-raw-transaction
+
+
+        We sign multiple times if there are several UTXOs in the input, once completely signed result
+        should be "complete=true", signrawtransaction does this automatically when given an array of privatekeys
+        the second param should be previous dependant tx for some reason it works with null.
+        '''
+        signed = creator.rpc.signrawtransaction(tx, [], keychain)
+        return signed
 
     @local.route('/listinputs', methods=['GET'])
     def listinputs(request):

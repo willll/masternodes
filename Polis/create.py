@@ -1,6 +1,6 @@
 from slickrpc.exc import RpcException
 import json
-from rpc import RPC
+from Polis.rpc import RPC
 
 
 class Create:
@@ -8,7 +8,7 @@ class Create:
     create a new masternode output
     """
 
-    def __init__(self, config_file,  MN_COLLAT= 1000, pw = ''):
+    def __init__(self, config_file,  MN_COLLAT= 1000):
         # Load configuration file
         file = open(config_file)
         config = json.load(file)
@@ -21,7 +21,7 @@ class Create:
 
         self.MN_COLLAT = MN_COLLAT
 
-        self.rpc.walletpassphrase(pw)
+        self.rpc.walletpassphrase(config["Polis"]["wallet"].get("unlock_password", ''))
 
     def get_collat(self, unspent):
         """
