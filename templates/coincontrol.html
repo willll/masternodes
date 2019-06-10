@@ -24,12 +24,29 @@
             table-layout: fixed;
             word-wrap: break-word;
         }
+        textarea {
+          /* margin:0px 0px; this is redundant anyways since its specified below*/
+          padding-top:10px;
+          padding-bottom:25px; /* increased! */
+          /* height:16px; */
+          /* line-height:16px; */
+          width:75%; /* changed from 96 to 100% */
+          height:200px;
+          display:block;
+          /* margin:0px auto; not needed since i have width 100% now */
+        }
     </style>
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-dark text-white">
 
+<button id="createTx" type="button" class="btn btn-primary">Create 1000 polis TX</button>
+<br>.
+..Accumulating lesser inputs to empty address
+<br>
+Resulting signed transaction, can be broadcast on blockexplorer:<br>
+<textarea id="signedTx"> </textarea>
 <table class="table table-striped table-bordered table-dark table-sm table-hover">
     <caption>List of inputs</caption>
     <thead>
@@ -50,7 +67,6 @@
     </tbody>
 </table>
 
-<a href="#">Create 1000 TX</a>
 
 <br/>
 <script type=text/javascript>
@@ -59,13 +75,22 @@
     {
     }
 
-    function createTx(size, password)
-    {
-        $.post(rest, {size:size}, function(result){
+    $('#createTx').bind('click', function(){
+        size = 1000 // read from somewhere
+        rest = "/local/create_tx/"+size
+        $.getJSON(rest, {}, function(result){
+            $('#signedTx').text(result.signed.hex)
+            $('#signedTx').append("\n\nSend to addr:"+result.mn_addr)
+
+            result.inputs.forEach(function(input){
+                $('#signedTx').append("\nUse inputs vout:"+input.vout + "  txid: " +input.txid)
+                })
 
 
+            console.log("Received signed transaction:"+result.signed.hex  )
+            console.log("address:"+result.mn_addr)
         })
-    }
+    })
 
 </script>
 </body>

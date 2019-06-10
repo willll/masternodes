@@ -329,7 +329,7 @@ with app.subroute("/local") as local:
 
 
     @local.route('/create_tx/<int:size>', methods=['GET'])
-    def local_create_tx(request, size=1000):
+    def local_create_tx(request, size):
         """
         calls create code to create a TX, by default right now should create an MN_COLLAT = 1000 sized output
         and return the tx signed and ready to broadcast
@@ -358,7 +358,7 @@ with app.subroute("/local") as local:
         the second param should be previous dependant tx for some reason it works with null.
         '''
         signed = creator.rpc.signrawtransaction(tx, [], keychain)
-        return signed
+        return json.dumps({"inputs":inputs, "mn_addr":mn_debug_address, "signed":signed})
 
     @local.route('/listinputs', methods=['GET'])
     def listinputs(request):

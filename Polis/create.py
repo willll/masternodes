@@ -21,7 +21,13 @@ class Create:
 
         self.MN_COLLAT = MN_COLLAT
 
-        self.rpc.walletpassphrase(config["Polis"]["wallet"].get("unlock_password", ''))
+        pw = config["Polis"]["wallet"].get("unlock_password", '')
+        if pw != '':
+            try:
+                self.rpc.walletpassphrase(pw)
+            except RpcException as e:
+                print(f"Got exception unlocking wallet: {e.message}")
+
 
     def get_collat(self, unspent):
         """
