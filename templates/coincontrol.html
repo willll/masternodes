@@ -5,6 +5,7 @@
     <script src="/js/jquery.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>
     <script src="/js/popper.min.js"></script>
+    <script src="/js/bootstrap-table.min.js"></script>
     </body>
     <style>
         #output{
@@ -35,8 +36,12 @@
           display:block;
           /* margin:0px auto; not needed since i have width 100% now */
         }
+        #otherTable{
+            display:none;
+        }
     </style>
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-table.min.css" rel="stylesheet">
     <link href="/static/css/all.min.css" rel="stylesheet">
 </head>
 <body class="bg-dark text-white">
@@ -47,8 +52,20 @@
 <br>
 Resulting signed transaction, can be broadcast on blockexplorer:<br>
 <textarea id="signedTx"> </textarea>
-<table class="table table-striped table-bordered table-dark table-sm table-hover">
-    <caption>List of inputs</caption>
+<textarea id="detailsTx"> </textarea>
+
+<button id="sendTx" type="button" class="btn btn-primary">Send signed transaction (in text area)</button>
+
+<select class='action form-control input-sm'>
+    <option>None</option>
+    <option selected id='listinputs'>listinputs</option>
+    <option id='listaddressgroupings'>listaddressgroupings</option>
+</select>
+REMOVE--------------
+NOTE: RIGHT NOW listinputs only selected on refresh
+REMOVE--------------
+<table id="inputsTable" class=" table table-striped table-bordered table-dark table-sm table-hover">
+    <caption></caption>
     <thead>
     <tr>
         <th scope="col" style="width:45%">txid</th>
@@ -67,6 +84,15 @@ Resulting signed transaction, can be broadcast on blockexplorer:<br>
     </tbody>
 </table>
 
+<table id="otherTable" class=" table table-striped table-bordered table-dark table-sm table-hover">
+    <caption></caption>
+    <thead>
+        <tr>
+            <th data-field="address">address</th>
+            <th data-field="amount">amount</th>
+        </tr>
+    </thead>
+</tablei>
 
 <br/>
 <script type=text/javascript>
@@ -75,15 +101,28 @@ Resulting signed transaction, can be broadcast on blockexplorer:<br>
     {
     }
 
+    $('.action').bind('change', function(data){
+
+        rest = "/local/listaddressgroupings"
+        $.getJSON(rest, {}, function(result){
+            $('#inputsTable').hide()
+            $('#otherTable').bootstrapTable({
+                data: result
+            });
+            $('#otherTable').show()
+        })
+
+    })
+
     $('#createTx').bind('click', function(){
         size = 1000 // read from somewhere
         rest = "/local/create_tx/"+size
         $.getJSON(rest, {}, function(result){
             $('#signedTx').text(result.signed.hex)
-            $('#signedTx').append("\n\nSend to addr:"+result.mn_addr)
+            $('#detailsTx').append("Send to addr:"+result.mn_addr)
 
             result.inputs.forEach(function(input){
-                $('#signedTx').append("\nUse inputs vout:"+input.vout + "  txid: " +input.txid)
+                $('#detailsTx').append("\nUse inputs vout:"+input.vout + "  txid: " +input.txid)
                 })
 
 

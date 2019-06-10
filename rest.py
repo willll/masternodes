@@ -360,6 +360,62 @@ with app.subroute("/local") as local:
         signed = creator.rpc.signrawtransaction(tx, [], keychain)
         return json.dumps({"inputs":inputs, "mn_addr":mn_debug_address, "signed":signed})
 
+
+    @local.route('/send_tx/<signedTx>', methods=['GET'])
+    def local_send_tx(request, signedTx):
+        """
+        sends a signed raw transaction
+
+        :param request:
+        :param signedTx:
+        :return:
+        """
+        rpc = RPC(config["Polis"]["wallet"]["username"],
+                  config["Polis"]["wallet"]["password"],
+                  config["Polis"]["wallet"]["ip"],
+                  config["Polis"]["wallet"]["port"])
+        sentTx = rpc.sendrawtransaction(signedTx)
+
+        return json.dumps(sentTx)
+
+    @local.route('/listaddressgroupings', methods=['GET'])
+    def local_listaddressgroupings(request):
+        """
+        listaddressgroupings:
+        Lists groups of addresses which have had their common ownership
+        made public by common use as inputs or as the resulting change
+        in past transactions
+
+        Result:
+        [
+          [
+            [
+              "address",            (string) The polis address
+              amount,                 (numeric) The amount in POLIS
+              "account"             (string, optional) DEPRECATED. The account
+            ]
+            ,...
+          ]
+          ,...
+        ]
+
+        :param request:
+        :param signedTx:
+        :return:
+        """
+        rpc = RPC(config["Polis"]["wallet"]["username"],
+                  config["Polis"]["wallet"]["password"],
+                  config["Polis"]["wallet"]["ip"],
+                  config["Polis"]["wallet"]["port"])
+
+        x = rpc.listaddressgroupings()
+
+        #turn nested list into a flat list of dictionaries {address:"....", amount:"...."}
+        #formating necessary for bootstrap-tables
+        flat = [{"address": j[0], "amount":j[1]} for i in x for j in i]
+
+        return json.dumps(flat)
+
     @local.route('/listinputs', methods=['GET'])
     def listinputs(request):
         '''
