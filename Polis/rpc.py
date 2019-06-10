@@ -55,6 +55,9 @@ class RPC:
     def signrawtransaction(self, tx, previous_tx, keychain):
         return self.proxy.signrawtransaction(tx, previous_tx, keychain)
 
+    def sendrawtransaction(self, signedTx):
+        return self.proxy.sendrawtransaction(signedTx)
+
     # == Polis ==
 
     def getMasternode(self, arg):

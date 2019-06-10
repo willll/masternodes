@@ -8,7 +8,7 @@ class Create:
     create a new masternode output
     """
 
-    def __init__(self, config_file,  MN_COLLAT= 1000):
+    def __init__(self, config_file,  send_amount= 1000):
         # Load configuration file
         file = open(config_file)
         config = json.load(file)
@@ -19,7 +19,7 @@ class Create:
                   config["Polis"]["wallet"]["ip"],
                   config["Polis"]["wallet"]["port"])
 
-        self.MN_COLLAT = MN_COLLAT
+        self.send_amount = send_amount
 
         pw = config["Polis"]["wallet"].get("unlock_password", '')
         if pw != '':
@@ -70,18 +70,26 @@ class Create:
             else:
                 keys[privkey] = 1
 
-            if total > self.MN_COLLAT:
+            if total > self.send_amount:
                 return [inputs, keychain, keys, total]
 
         return []
 
-    def prepare_raw_tx(self, mn_address, change_address, inputs, total, qty=1000, fee=0.00001):
+    def prepare_raw_tx(self, mn_address, change_address, inputs, total, fee=0.00001):
         """
-        Create and sign a transaction to be broadcast,
-        this is used to create a masternode output tx
-        for example
+         Create and sign a transaction to be broadcast, this is used to create a masternode output tx for example
+
+         Default quantity sent will be self.send_amount
+
+        :param mn_address:
+        :param change_address:
+        :param inputs: selected inputs for this tx
+        :param total: total of selected inputs
+        :param fee: fee
+        :return:
         """
-        return self.rpc.createrawtransaction(inputs, {mn_address: qty, change_address: total - qty - fee})
+        raw_tx = {mn_address: self.send_amount, change_address: total - self.send_amount - fee}
+        return self.rpc.createrawtransaction(inputs, raw_tx)
 
     def get_empty_addresses(self, amt):
         """

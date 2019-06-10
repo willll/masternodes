@@ -47,6 +47,8 @@
 <body class="bg-dark text-white">
 
 <button id="createTx" type="button" class="btn btn-primary">Create 1000 polis TX</button>
+<input type="text" value="1000" class="form-control" id="txSize">
+
 <br>.
 ..Accumulating lesser inputs to empty address
 <br>
@@ -114,8 +116,23 @@ REMOVE--------------
 
     })
 
+    $('#sendTx').bind('click', function(){
+
+        hex=$('#signedTx').text()
+
+        if( hex == ''){
+            $('#signedTx').text("Click create tx first !!!")
+            return;
+        }
+
+        rest = "/local/send_tx/"+hex
+        $.getJSON(rest, {}, function(result){
+            $('#detailsTx').append("Tx ID (masternode output..):"+result.txid)
+        })
+    })
+
     $('#createTx').bind('click', function(){
-        size = 1000 // read from somewhere
+        size = $('#txSize').val() // read from somewhere
         rest = "/local/create_tx/"+size
         $.getJSON(rest, {}, function(result){
             $('#signedTx').text(result.signed.hex)
@@ -127,7 +144,7 @@ REMOVE--------------
 
 
             console.log("Received signed transaction:"+result.signed.hex  )
-            console.log("address:"+result.mn_addr)
+            console.log("address:"+result.mn_addr+"\n")
         })
     })
 

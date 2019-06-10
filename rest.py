@@ -328,13 +328,14 @@ with app.subroute("/local") as local:
         return render_without_request(template, inputs=preload)
 
 
-    @local.route('/create_tx/<int:size>', methods=['GET'])
+    @local.route('/create_tx/<float:size>', methods=['GET'])
     def local_create_tx(request, size):
         """
         calls create code to create a TX, by default right now should create an MN_COLLAT = 1000 sized output
         and return the tx signed and ready to broadcast
 
         :param request:
+        :param size:
         :return:
         """
         creator = Create('config.json', size)
@@ -376,7 +377,7 @@ with app.subroute("/local") as local:
                   config["Polis"]["wallet"]["port"])
         sentTx = rpc.sendrawtransaction(signedTx)
 
-        return json.dumps(sentTx)
+        return json.dumps({"txid":sentTx})
 
     @local.route('/listaddressgroupings', methods=['GET'])
     def local_listaddressgroupings(request):
