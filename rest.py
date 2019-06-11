@@ -359,8 +359,8 @@ with app.subroute("/local") as local:
         return json.dumps({})
 
 
-    @local.route('/create_tx/<float:size>', methods=['GET'])
-    def local_create_tx(request, size):
+    @local.route('/create_tx/<size>', methods=['GET'])
+    def local_create_tx(request, size = 1000):
         """
         calls create code to create a TX, by default right now should create an 1000 sized output
         and return the tx signed and ready to broadcast
@@ -369,6 +369,11 @@ with app.subroute("/local") as local:
         :param size:
         :return:
         """
+        try:
+            size = float(size)
+        except ValueError:
+            return json.dumps({"success":"failed","message":f"'{size}' is not a number, tr"})
+
         creator = Create('config.json', size)
 
         [inputs, keychain, keys, total] = creator.get_collat(creator.rpc.listunspent())

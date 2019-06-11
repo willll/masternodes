@@ -142,6 +142,11 @@ Resulting signed transaction, can be broadcast on blockexplorer:<br>
         size = $('#txSize').val() // read from somewhere
         rest = "/local/create_tx/"+size
         $.getJSON(rest, {}, function(result){
+            if(result.success == "failed")
+            {
+               $('#signedTx').text("Problem crreating tx: " + result.message)
+               return;
+            }
             $('#signedTx').text(result.signed.hex)
             $('#detailsTx').append("Send to addr:"+result.mn_addr)
 

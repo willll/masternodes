@@ -73,6 +73,8 @@ class Create:
             if total > self.send_amount:
                 return [inputs, keychain, keys, total]
 
+        # if we reach this we might not have enough coins to send
+        # could throw an exception
         return []
 
     def prepare_raw_tx(self, mn_address, change_address, inputs, total, fee=0.00001):
