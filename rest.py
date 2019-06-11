@@ -300,8 +300,8 @@ Front end for local wallet control
 with app.subroute("/local") as local:
     from Polis import rpc
 
-    @local.route('/cmd/<int:command>', methods=['GET'])
-    def local_daemon(request, command, param):
+    @local.route('/cmd/<command>', methods=['GET'])
+    def local_daemon_list(request, command, param):
         '''
         Command for local wallet
         :param request:
@@ -309,6 +309,15 @@ with app.subroute("/local") as local:
         :param param:
         :return:
         '''
+        commands = {'lsunspent': 'listunspent',
+                    'lslockunspent': 'listlockunspent',
+                    'listaccounts': 'listaccounts',
+                    'listtransactions': 'listtransactions'}
+
+        rpc = RPC(config["Polis"]["wallet"]["username"],
+                  config["Polis"]["wallet"]["password"],
+                  config["Polis"]["wallet"]["ip"],
+                  config["Polis"]["wallet"]["port"])
 
 
         return None
@@ -328,10 +337,32 @@ with app.subroute("/local") as local:
         return render_without_request(template, inputs=preload)
 
 
+    @local.route('/lockunspent/<txid>/<vout>/<lock>', methods=['GET'])
+    def local_lockunspent(request, txid, vout = 0 , lock = "false"):
+        """
+        Lock a txid,  requires at least the txid
+
+        TODO: could also make it take multiple tx at once
+
+        :param request:
+        :param txid:
+        :param vout:
+        :param lock:
+        :return:
+        """
+        rpc = RPC(config["Polis"]["wallet"]["username"],
+                  config["Polis"]["wallet"]["password"],
+                  config["Polis"]["wallet"]["ip"],
+                  config["Polis"]["wallet"]["port"])
+        locked = rpc.lockunspent((lock == "true"), [{"txid":txid, "vout":int(vout)}])
+
+        return json.dumps({})
+
+
     @local.route('/create_tx/<float:size>', methods=['GET'])
     def local_create_tx(request, size):
         """
-        calls create code to create a TX, by default right now should create an MN_COLLAT = 1000 sized output
+        calls create code to create a TX, by default right now should create an 1000 sized output
         and return the tx signed and ready to broadcast
 
         :param request:
@@ -443,7 +474,7 @@ with app.subroute("/local") as local:
                   config["Polis"]["wallet"]["port"])
         li = rpc.listunspent()
 
-        return li
+        return json.dumps(li)
 
 
 '''

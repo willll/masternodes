@@ -8,6 +8,7 @@ class RPC:
         self.proxy = Proxy(service_url=f"http://{username}:{password}@{ip}:{port}")
 
     # == Wallet ==
+    # -- list --
 
     def listunspent(self):
         return self.proxy.listunspent()
@@ -21,13 +22,14 @@ class RPC:
     def listtransactions(self):
         return self.proxy.listtransactions()
 
+    def listaddressgroupings(self):
+        return self.proxy.listaddressgroupings()
 
     def getstakingstatus(self):
         return self.proxy.getstakingstatus()
 
     def getbalance(self):
         return self.proxy.getbalance()
-
 
     def getnewaddress(self):
         return self.proxy.getnewaddress()
@@ -36,15 +38,11 @@ class RPC:
     def walletpassphrase(self, pw):
         return self.proxy.walletpassphrase(pw, 1)
 
-
     def sendtoaddress(self, address, send):
         return self.proxy.sendtoaddress(address, send)
 
     def dumpprivkey(self, address, two_fa=''):
         return self.proxy.dumpprivkey(address, two_fa)
-
-    def listaddressgroupings(self):
-        return self.proxy.listaddressgroupings()
 
     def createrawtransaction(self, inputs, outputs):
         return self.proxy.createrawtransaction(inputs, outputs)
@@ -57,6 +55,9 @@ class RPC:
 
     def sendrawtransaction(self, signedTx):
         return self.proxy.sendrawtransaction(signedTx)
+
+    def lockunspent(self, lock, tx):
+        return self.proxy.lockunspent(lock, tx)
 
     # == Polis ==
 

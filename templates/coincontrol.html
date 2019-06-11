@@ -63,30 +63,30 @@ Resulting signed transaction, can be broadcast on blockexplorer:<br>
     <option selected id='listinputs'>listinputs</option>
     <option id='listaddressgroupings'>listaddressgroupings</option>
 </select>
-REMOVE--------------
-NOTE: RIGHT NOW listinputs only selected on refresh
-REMOVE--------------
-<table id="inputsTable" class=" table table-striped table-bordered table-dark table-sm table-hover">
-    <caption></caption>
-    <thead>
-    <tr>
-        <th scope="col" style="width:45%">txid</th>
-        <th scope="col" style="width:30%">Actions</th>
-        <th scope="col" style="width:35%">scriptpubkey</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for item in inputs %}
-    <tr id="row_{{ item.idx }}">
-        <th scope="row" >{{item.txid}}<br> vout: {{item.vout}}<br> conf: {{item.confirmations}}</th>
-        <td title="{{item.address}}">{{item.address}} <br> amount: {{item.amount}}</td>
-        <td title="{{item.scriptPubKey}}">{{item.scriptPubKey}}<br>solvable:{{item.solvable}} / spendable: {{item.spendable}}<br>{{item.ps_rounds}} </td>
-    </tr>
-    {% endfor %}
-    </tbody>
-</table>
 
-<table id="otherTable" class=" table table-striped table-bordered table-dark table-sm table-hover">
+<form>
+    <button id="lockTx" type="button" class="btn btn-primary">Lock selected tx</button>
+    <table id="inputsTable"
+            data-toggle="table"
+            data-select-item-name="txid"
+            data-url="/local/listinputs"
+            class="table table-striped table-bordered table-dark table-sm table-hover">
+        <thead>
+            <tr>
+                <th data-radio="true"></th>
+                <th data-field="txid" width="40%">TXID</th>
+                <th data-field="vout">vout</th>
+                <th data-field="amount">amount</th>
+            </tr>
+        </thead>
+    </table>
+</form>
+
+
+<table id="otherTable"
+       data-toggle="table"
+       data-url="/local/listaddressgroupings"
+       class="table table-striped table-bordered table-dark table-sm table-hover">
     <caption></caption>
     <thead>
         <tr>
@@ -99,21 +99,28 @@ REMOVE--------------
 <br/>
 <script type=text/javascript>
 
-    function getInputs()
-    {
-    }
-
     $('.action').bind('change', function(data){
+            $('#otherTable').toggle()
+            $('#inputsTable').toggle()
+    })
+    $('#lockTx').bind('click', function(){
+        /*
+        TODO: Shouldbe a better way to get this
+        */
+        txid = $('tr.selected td')[1].innerText
+        vout = $('tr.selected td')[2].innerText
 
-        rest = "/local/listaddressgroupings"
+        if( txid == ''){
+            alert("Select input, then chose tx first !")
+            return;
+        }
+
+        lock = "false"
+
+        rest = "/local/lockunspent/"+txid+"/"+vout+"/"+lock
         $.getJSON(rest, {}, function(result){
-            $('#inputsTable').hide()
-            $('#otherTable').bootstrapTable({
-                data: result
-            });
-            $('#otherTable').show()
+            $('#detailsTx').append("Tx ID (masternode output..):"+result.txid)
         })
-
     })
 
     $('#sendTx').bind('click', function(){
@@ -127,7 +134,7 @@ REMOVE--------------
 
         rest = "/local/send_tx/"+hex
         $.getJSON(rest, {}, function(result){
-            $('#detailsTx').append("Tx ID (masternode output..):"+result.txid)
+            $('#detailsTx').append("\nTx ID (masternode output..):"+result.txid)
         })
     })
 
