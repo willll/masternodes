@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Masternode List</title>
+    <title>Local daemon control</title>
     <script src="/js/jquery.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>
     <script src="/js/popper.min.js"></script>
@@ -64,6 +64,8 @@ Resulting signed transaction, can be broadcast on blockexplorer:<br>
     <option id='listaddressgroupings'>listaddressgroupings</option>
 </select>
 
+<button id="findMnOutput" type="button" class="btn btn-primary">Find MN output</button>
+<br>
 <form>
     <button id="lockTx" type="button" class="btn btn-primary">Lock selected tx</button>
     <table id="inputsTable"
@@ -103,9 +105,21 @@ Resulting signed transaction, can be broadcast on blockexplorer:<br>
             $('#otherTable').toggle()
             $('#inputsTable').toggle()
     })
+    $('#findMnOutput').bind('click', function(){
+        mnoutput = ''
+        $('#inputsTable').bootstrapTable().data()["bootstrap.table"].data.some(
+             function( input ) {
+                mnoutput=input.txid+" "+input.vout ;
+                return input.amount == 1000
+              })
+
+         $('#detailsTx').append("\n\nMasternode output:"+mnoutput)
+
+    })
     $('#lockTx').bind('click', function(){
         /*
         TODO: Shouldbe a better way to get this
+        $('#\\otherTable').bootstrapTable().data()["bootstrap.table"].data
         */
         txid = $('tr.selected td')[1].innerText
         vout = $('tr.selected td')[2].innerText
