@@ -358,6 +358,30 @@ with app.subroute("/local") as local:
 
         return json.dumps({})
 
+    @local.route('/masternode/<command>', methods=['GET'])
+    def local_create_tx(request, command):
+        """
+
+        :param request:
+        :param command:
+        :return:
+        """
+
+        allowed= ('output', 'status')
+        rpc = RPC(config["Polis"]["wallet"]["username"],
+                  config["Polis"]["wallet"]["password"],
+                  config["Polis"]["wallet"]["ip"],
+                  config["Polis"]["wallet"]["port"])
+
+        result = ''
+        if command in allowed:
+            result= rpc.masternode(command)
+        else:
+            result={'status':'failed', 'message':'command not implemented'}
+
+        return json.dumps(result)
+
+
 
     @local.route('/create_tx/<size>', methods=['GET'])
     def local_create_tx(request, size = 1000):

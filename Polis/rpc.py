@@ -34,7 +34,6 @@ class RPC:
     def getnewaddress(self):
         return self.proxy.getnewaddress()
 
-
     def walletpassphrase(self, pw):
         return self.proxy.walletpassphrase(pw, 1)
 
@@ -63,3 +62,9 @@ class RPC:
 
     def getMasternode(self, arg):
         return self.proxy.masternode(arg)
+
+    def masternodelist(self, mode, filter):
+        return self.proxy.masternodelist(mode, filter)
+
+    def masternodebroadcast(self, command):
+        return self.proxy.masternodebroadcast(command)

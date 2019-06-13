@@ -105,6 +105,29 @@ Resulting signed transaction, can be broadcast on blockexplorer:<br>
             $('#otherTable').toggle()
             $('#inputsTable').toggle()
     })
+    function masternode(command){
+        /*
+            Available commands:
+          count        - Get information about number of masternodes (DEPRECATED options: 'total', 'ps', 'enabled', 'qualify', 'all')
+          current      - Print info on current masternode winner to be paid the next block (calculated locally)
+          genkey       - Generate new masternodeprivkey
+          outputs      - Print masternode compatible outputs
+          start-alias  - Start single remote masternode by assigned alias configured in masternode.conf
+          start-<mode> - Start remote masternodes configured in masternode.conf (<mode>: 'all', 'missing', 'disabled')
+          status       - Print masternode status information
+          list         - Print list of all known masternodes (see masternodelist for more info)
+          list-conf    - Print masternode.conf in JSON format
+          winner       - Print info on next masternode winner to vote for
+          winners      - Print list of masternode winners
+
+        */
+
+        rest = "/local/masternode/"+command
+        $.getJSON(rest, {}, function(result){
+            console.log(JSON.stringify(result))
+        })
+
+    }
     $('#findMnOutput').bind('click', function(){
         mnoutput = ''
         $('#inputsTable').bootstrapTable().data()["bootstrap.table"].data.some(
@@ -113,7 +136,7 @@ Resulting signed transaction, can be broadcast on blockexplorer:<br>
                 return input.amount == 1000
               })
 
-         $('#detailsTx').append("\n\nMasternode output:"+mnoutput)
+        $('#detailsTx').append("\n\nMasternode output:"+mnoutput)
 
     })
     $('#lockTx').bind('click', function(){
