@@ -135,25 +135,36 @@ with app.subroute("/scripts") as scripts:
 Manage the config file from web
 '''
 with app.subroute("/config") as conf:
-    ''' 
-    Return json of config.
-    '''
-    @conf.route('/read', methods= ['GET'])
-    def config_read(request):
-        return json.dumps(config)
 
-    '''
-    receive json to modify the conf
-    '''
-    @conf.route('/write', methods= ['POST'])
+    @conf.route('/masternodes/read', methods= ['GET'])
+    def config_read(request):
+        """
+        list of masternodes in config
+
+        :param request:
+        :return:
+        """
+        return json.dumps([d['connection_string'] for d in config["masternodes"]])
+
+    @conf.route('/masternodes/write', methods= ['POST'])
     def config_write(request):
+        """
+        Enable update to the masternodes in config
+        TODO: not done...
+
+        :param request:
+        :return:
+        """
         return succeed()
 
-    '''
-    add configuration for one masternode
-    '''
-    @conf.route('/mn/add', methods=['post'])
+    @conf.route('/masternode/add', methods=['post'])
     def config_add_mn(request):
+        """
+            add configuration for one masternode
+
+        :param request:
+        :return:
+        """
         return succeed()
 
     '''
@@ -164,18 +175,18 @@ with app.subroute("/config") as conf:
         return render_without_request()
 
 
-'''
-Create a new MN:
-Deploy a new MN based on form information, also save it to config
-TODO:
-    - Form which takes: IP of new VPS, password of vps, tx output optional
-    (eventually generate automatically here through request)
-    - Runs script to update VPS, copy polis binary from local,
-    generate priv key, install sentinel and crontab job, install
-    cron task to watch daemon every minute and relaunch it
-'''
 @app.route('/create', methods=['POST', 'GET'])
 def create(request):
+    """
+    Create a new Masternode :
+    Deploy a new MN based on form information, also save it to config
+    TODO:
+        - Runs script to update VPS, copy polis binary from local,
+        generate priv key, install sentinel and crontab job, install
+        cron task to watch daemon every minute and relaunch it
+    :param request:
+    :return:
+    """
     if request.method == b'POST':
         password =(request.args.get(b'password', [0])[0]).decode()
         ip =(request.args.get(b'ip', [0])[0]).decode()
@@ -400,7 +411,11 @@ with app.subroute("/local") as local:
 
         creator = Create('config.json', size)
 
-        [inputs, keychain, keys, total] = creator.get_collat(creator.rpc.listunspent())
+        try:
+            [inputs, keychain, keys, total] = creator.get_collat(creator.rpc.listunspent())
+        except Exception as e:
+            logging.error(f"Failed because: {str(e)}")
+            return json.dumps({"success":"failed", "message":str(e)})
 
         [change_debug_address, mn_debug_address] = creator.get_empty_addresses(2)
 

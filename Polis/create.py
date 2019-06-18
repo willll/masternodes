@@ -73,6 +73,7 @@ class Create:
             if total > self.send_amount:
                 return [inputs, keychain, keys, total]
 
+        raise Exception(f'Finished unspent and did not find enough got {total}')
         # if we reach this we might not have enough coins to send
         # could throw an exception
         return []
