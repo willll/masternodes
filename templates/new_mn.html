@@ -1,26 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <title>Create Masternode</title>
 	<script src="/js/jquery.min.js"></script>
     <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/bootstrap-table.min.js"></script>
     <link rel="stylesheet" href="/static/css/bootstrap.min.css">
-    <title>Create Masternode</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap-table.min.css" rel="stylesheet">
+    <link href="/static/css/all.min.css" rel="stylesheet">
 </head>
 
 <body>
-<h1>Create new Masternode (VPS side)</h1>
+<h1>Create new Masternode VPS, and setup VPS</h1>
 
 <form id="create" method="POST" action="/create">
-	username: <input type="text" id="user" name="user" value="root" /><br/>
-	IP: <input type="text" id="ip" name="ip"/><br/>
-	Password: <input type="text" id="password" name="password"/><br/>
-	port: <input type="text" id="port" name="port" value="8145"/><br/>
-	name: <input type="text" id="name" name="name" /><br/>
-	<button class="create">Create masternode ready vps</button><br/>
+    <div class="form-group">
+        <label for="user">username:</label>
+        <input type="text" id="user" name="user" value="root" />
+    </div>
+
+    <div class="form-group">
+        <label for="ip">IP:</label>
+        <input type="text" id="ip" name="ip"/>
+    </div>
+    <div class="form-group">
+        Password: <input type="text" id="password" name="password"/>
+    </div>
+    <div class="form-group">
+        <label for="port">port:</label>
+        <input type="text" id="port" name="port" value="8145"/>
+    </div>
+    <div class="form-group">
+        <label for="name">name:</label>
+        <input type="text" id="name" name="name" />
+    </div>
+    <div class="form-group">
+        <label for="output">Choose your masternode output</label>
+        <table id="output"
+                data-toggle="table"
+                data-select-item-name="txid"
+                data-url="/local/listinputs"
+                class="table table-striped table-bordered table-dark table-sm table-hover">
+            <thead>
+                <tr>
+                    <th data-radio="true"></th>
+                    <th data-field="txid" width="40%">TXID</th>
+                    <th data-field="vout">vout</th>
+                    <th data-field="amount">amount</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+
+	<button class="create" class="btn btn-primary mb-2">Create masternode ready vps</button><br/>
 	<hr/> 
 	<div class="status" id="result"/>
-
 </form>
 
 <script type=text/javascript>
