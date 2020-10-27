@@ -4,7 +4,7 @@ Automat==0.7.0
 bcrypt==3.1.5
 cffi==1.11.5
 constantly==15.1.0
-cryptography==2.4.2
+cryptography==3.2
 fabric==2.4.0
 hyperlink==18.0.0
 idna==2.8
