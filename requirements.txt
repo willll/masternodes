@@ -10,7 +10,7 @@ hyperlink==18.0.0
 idna==2.8
 incremental==17.5.0
 invoke==1.2.0
-Jinja2==2.10
+Jinja2==2.11.3
 klein==17.10.0
 MarkupSafe==1.1.0
 paramiko==2.4.2
